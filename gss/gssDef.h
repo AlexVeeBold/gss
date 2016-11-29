@@ -30,6 +30,7 @@
       W ---------+---------> E
                 /|         (X-axis)
                / '
+              S   DOWN
           180°    
 
 rotX,rotY,rotZ: normalized forward vector:
