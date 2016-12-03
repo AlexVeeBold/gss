@@ -28,6 +28,11 @@ void GtaSetNextVehicleVariation(BYTE variation1, BYTE variation2);
 void GtaDrawMarkerSet(DWORD markerIndex, DWORD markerType, FloatVector3* pPos, FLOAT size, FLOAT pulsation, ByteVector4* pRgba, DWORD flags);
 void GtaDrawMarker1(DWORD markerIndex, DWORD markerType, FloatVector3* pPos, FLOAT size, FLOAT pulsation, ByteVector4* pRgba, DWORD flags, INT markerMovement);
 
+void GtaExecScriptCommand(void* pScriptContext);
+BYTE* GtaGetScriptDataBuffer(void);
+
+DWORD GtaGetGameTime(void);
+
 
 
 struct ScriptEventListener {

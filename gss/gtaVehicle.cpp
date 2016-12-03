@@ -9,8 +9,12 @@
 //
 //   02.12.2014 02:39 - created (moved from gssMain)
 //   27.11.2016 11:49 - fixed recently added VC CVehicle layout
+//   03.12.2016 22:54 - renamed VehicleG3 to VehicleIII
+//   04.12.2016 01:44 - recreated GenerateFreeVehicleSpec
 //
 
+#define _USE_MATH_DEFINES
+#include <cmath>
 
 #include "uDef.h"
 #include "tunic.h"
@@ -221,7 +225,7 @@ void VehicleStoreMatrix(GVeh30& vehInfo, const GtaMatrix4& mat)
 
 
 #include "iimpl.h"
-class VehicleG3 : public IVehicle {
+class VehicleIII : public IVehicle {
 private:
     // no data members
 public:
@@ -235,7 +239,7 @@ public:
 };
 
 #include "iimpl.h"
-class VehicleVC : public VehicleG3 {
+class VehicleVC : public VehicleIII {
 private:
     // no data members
 public:
@@ -251,8 +255,8 @@ public:
 
 #define VEH_DEBUG
 //#undef VEH_DEBUG
-#define VEH_DEBUG_MORE
-//#undef VEH_DEBUG_MORE
+//#define VEH_DEBUG_MORE
+#undef VEH_DEBUG_MORE
 
 #ifdef VEH_DEBUG
 #define VLOG(x)     x;
@@ -266,25 +270,25 @@ public:
 #define VLOGX(x)    // nothing
 #endif
 
-DWORD VehicleG3::getVehSpecSize(void)
+DWORD VehicleIII::getVehSpecSize(void)
 {
     return sizeof(GVeh30);
 }
 
-// VC: reuse G3
+// VC: reuse III
 
 
 
-void VehicleG3::clearSpec(VehSpec vehSpec)
+void VehicleIII::clearSpec(VehSpec vehSpec)
 {
     memset(vehSpec, 0, sizeof(GVeh30));
 }
 
-// VC: reuse G3
+// VC: reuse III
 
 
 
-void VehicleG3::describe(VehSpec vehSpec, Vehicle vehicle)
+void VehicleIII::describe(VehSpec vehSpec, Vehicle vehicle)
 {
     VLOG(lss << UL::DEBUG << L("VehG3_describe: ") << ulhex(vehicle) << UL::ENDL);
     GCVehicleIII* pCVehicle = static_cast<GCVehicleIII*>(GtaGetCVehiclePtr(vehicle));
@@ -350,7 +354,7 @@ void VehicleG3::describe(VehSpec vehSpec, Vehicle vehicle)
     VLOG(lss << UL::DEBUG << L("VehG3_describe done") << UL::ENDL);
 }
 
-Vehicle VehicleG3::spawn(VehSpec vehSpec)
+Vehicle VehicleIII::spawn(VehSpec vehSpec)
 {
     VLOG(lss << UL::DEBUG << L("VehG3_spawn: [") << ulhex(vehSpec) << L("]") << UL::ENDL);
     Vehicle vehicle = 0;
@@ -615,7 +619,7 @@ Vehicle VehicleVC::spawn(VehSpec vehSpec)
 
 
 
-DWORD VehicleG3::getModel(Vehicle vehicle)
+DWORD VehicleIII::getModel(Vehicle vehicle)
 {
     DWORD model = 0;
     G30CEntity* pCEntity = static_cast<G30CEntity*>(GtaGetCVehiclePtr(vehicle));
@@ -626,11 +630,11 @@ DWORD VehicleG3::getModel(Vehicle vehicle)
     return model;
 }
 
-// VC: reuse G3
+// VC: reuse III
 
 
 
-void VehicleG3::doAlarmShort(Vehicle vehicle)
+void VehicleIII::doAlarmShort(Vehicle vehicle)
 {
     // make some noise
     GCVehicleIII* pCVehicle = static_cast<GCVehicleIII*>(static_cast<void*>(GtaGetCVehiclePtr(vehicle)));
@@ -647,7 +651,7 @@ void VehicleVC::doAlarmShort(Vehicle vehicle)
 
 
 
-void VehicleG3::release(Vehicle* pVehicle)
+void VehicleIII::release(Vehicle* pVehicle)
 {
     if(*pVehicle != 0)
     {
@@ -657,13 +661,13 @@ void VehicleG3::release(Vehicle* pVehicle)
     }
 }
 
-// VC: reuse G3
+// VC: reuse III
 
 
 
 
 
-VehicleG3 vehIII;
+VehicleIII vehIII;
 VehicleVC vehVC;
 
 DWORD VehicleGtaVersion = GTA_UNKNOWN;
@@ -680,8 +684,10 @@ IVehicle* GtaVehicleInit(DWORD GtaVersion)
     VLOGX(lss << UL::DEBUG << L("vc.f1A0color1: ") << ulhex(OFFSETOF(GCVehicleVC, color1)) << UL::ENDL);
     VLOGX(lss << UL::DEBUG << L("vc.f1F9equip: ") << ulhex(OFFSETOF(GCVehicleVC, equipmentFlags)) << UL::ENDL);
 
+    VehicleGtaVersion = GtaVersion;
+
     IVehicle* pIVehicle = nullptr;
-    switch(GtaVersion)
+    switch(VehicleGtaVersion)
     {
     case GTA_III:
         pIVehicle = &vehIII;
@@ -690,12 +696,80 @@ IVehicle* GtaVehicleInit(DWORD GtaVersion)
         pIVehicle = &vehVC;
         break;
     }
-    VehicleGtaVersion = GtaVersion;
     return pIVehicle;
 }
 
 
 
+struct FreeVeh30 {
+    DWORD model;
+    BYTE color1;
+    BYTE color2;
+    BYTE variation1;
+    BYTE variation2;
+    BYTE proofs;
+    BYTE radiostation;
+};
+
+FreeVeh30 kuruma = {
+    VM_III_KURUMA,  // Kuruma
+    0x3A, 0x01,     // aqua / white
+    0xFF, 0xFF,     // no variations
+    0x00, 0x0B,     // no proofs, radio off
+};
+FreeVeh30 cheetah = {
+    VM_VC_CHEETAH,  // Cheetah
+    0x34, 0x34,     // dark blue / dark blue
+    0x01, 0xFF,     // with side mirrors
+    0x00, 0x0A,     // no proofs, radio off
+};
+
+DWORD GenerateFreeVehicleSpec(VehSpec vehSpec, const FloatAngledVector3& pos)
+{
+    FreeVeh30* pFreeVeh = nullptr;
+    DWORD model = 0;
+    switch(VehicleGtaVersion)
+    {
+    case GTA_III:
+        pFreeVeh = &kuruma;
+        break;
+    case GTA_VC:
+        pFreeVeh = &cheetah;
+        break;
+    }
+
+    if(pFreeVeh != nullptr)
+    {
+        FLOAT angleRad = static_cast<FLOAT>(pos.angle / 180.0f * M_PI);
+        GtaMatrix4 mat;
+        mat.m41 = pos.pos.X;
+        mat.m42 = pos.pos.Y;
+        mat.m43 = pos.pos.Z + 2.0f;     //tmp
+        // rot x = { 0°:  0.0, 90°: -1.0, 180°:  0.0, 270°: +1.0 } = -sin()
+        // rot y = { 0°: +1.0, 90°:  0.0, 180°: -1.0, 270°:  0.0 } =  cos()
+        // rot z = 0.0
+        mat.m21 = -sinf(angleRad);
+        mat.m22 = cosf(angleRad);
+        mat.m23 = 0.0f;
+        lss << UL::DEBUG << L("genVeh: p:(") << pos.pos.X << L(", ") << pos.pos.Y << L(", ") << pos.pos.Z << L(") ");
+        lss << L(" a:") << pos.angle << L(" aRad:") << angleRad << L(" r:(") << mat.m21 << L(", ") << mat.m22 << L(", ") << mat.m23 << L(")") << UL::ENDL;
+
+        GVeh30* pVeh30 = static_cast<GVeh30*>(vehSpec);
+        pVeh30->model = pFreeVeh->model;
+        VehicleStoreMatrix(*pVeh30, mat);
+        pVeh30->proofs = pFreeVeh->proofs;
+        pVeh30->creationTime = GtaGetGameTime();
+        pVeh30->color1 = pFreeVeh->color1;
+        pVeh30->color2 = pFreeVeh->color2;
+        pVeh30->variation1 = pFreeVeh->variation1;
+        pVeh30->variation2 = pFreeVeh->variation2;
+        pVeh30->radiostation = pFreeVeh->radiostation;
+        pVeh30->autoBombType = 0;
+        pVeh30->unused0 = 0;
+        model = pFreeVeh->model;
+    }
+    return model;
+}
 
 /*
 CONST DWORD freeVehCountIII = 1;

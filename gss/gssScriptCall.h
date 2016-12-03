@@ -71,14 +71,22 @@ enum GTA3MARKERTYPE {
 };
 
 
-void stc3Init(DWORD gtaVersion);
 
+#include "idecl.h"
+class IScriptThread {
+public:
+    IENTRY void ICALL setOffsetIP(DWORD offset) IPURE;
+    IENTRY BOOL ICALLVA invoke(DWORD commandIndex, ...) IPURE;
+};
 
+extern IScriptThread* g_pIScript;
 
-//INTERNAL//INTERNAL//INTERNAL//INTERNAL//
-BOOL stc3Call(DWORD dwCommandIndex, ...);
-void stc3OffsetIP(DWORD offset);
+void GtaScriptInit(DWORD GtaVersion);
+BOOL GtaScriptInvoke(DWORD dwCommandIndex, ...);
+void GtaScriptSetOffsetIP(DWORD offset);
 
+#define SNFIDXCALL              g_pIScript->setOffsetIP
+#define SNCALL                  g_pIScript->invoke
 
 
 // // // // COMMAND NAMES // // // //
@@ -107,15 +115,9 @@ enum SNCOMMANDINDEX {
 #define      SNCxVOID(sname, code, hash, rtype,     nargs)  SNC_TYPE(void)  sname(                  SNC_AD_##nargs) {                           SNC_CALL(SNCMD_NAME(sname), SNC_CA_##nargs); }
 #define      SNCxBOOL(sname, code, hash, rtype,     nargs)  SNC_TYPE(rtype) sname(                  SNC_AD_##nargs) {                    return SNC_CALL(SNCMD_NAME(sname), SNC_CA_##nargs); }
 
-#define SNCALL                  stc3Call
-#define SNFIDXCALL              stc3OffsetIP
-
 #define SND_PROC_NAMESPACE
 #include "gssScriptCallData.h"
 #undef SND_PROC_NAMESPACE
-
-#undef SNCALL
-#undef SNFAKEINDEX
 
 #undef SNCxFAKExVOID
 #undef SNCxVOID

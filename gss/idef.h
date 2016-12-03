@@ -13,6 +13,7 @@
 //
 
 #undef ICALL
+#undef ICALLVA
 #undef IENTRY
 #undef IPURE
 
@@ -50,7 +51,8 @@
     arguments are passed from right to left
     stack is cleared by callee
 */
-#define ICALL       __stdcall           // x86 only, will be comiled as __fastcall on x86-64
+#define ICALL       __stdcall           // x86 only, will be compiled as __fastcall on x86-64
+#define ICALLVA     __cdecl             // x86 only
 
 #ifdef IDEF
 #define IENTRY      virtual

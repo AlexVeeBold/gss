@@ -486,10 +486,10 @@ BYTE GtaVehInfo::getVehicleTypes(const VehInfoData& VIP)
 
 BYTE GtaVehInfo::getVehicleTypes(DWORD vehicleModel)
 {
-    lss << L("GVI.GetTypes: gtaVer ") << ulhex(m_gtaVersion) << L(" mdl ") << ulhex(vehicleModel) << L(" min ") << ulhex(m_indexMin)  << L(" max ") << ulhex(m_indexMax) << UL::ENDL;
+//    lss << L("GVI.GetTypes: gtaVer ") << ulhex(m_gtaVersion) << L(" mdl ") << ulhex(vehicleModel) << L(" min ") << ulhex(m_indexMin)  << L(" max ") << ulhex(m_indexMax) << UL::ENDL;
     if((m_gtaVersion == GTA_UNKNOWN) || (vehicleModel < m_indexMin) || (vehicleModel > m_indexMax))
     {
-        lss << L("GVI.GetTypes: 0 !") << UL::ENDL;
+//        lss << L("GVI.GetTypes: 0 !") << UL::ENDL;
         return 0;
     }
 
@@ -505,7 +505,7 @@ BYTE GtaVehInfo::getVehicleTypes(DWORD vehicleModel)
     {
         vehTypes = this->getVehicleTypes(VIP);
     }
-    lss << L("GVI.GetTypes: ") << ulhex(vehicleModel) << L(" -> ") << ulhex(&VIP) << L(" -> ") << ulhex(vehTypes) << UL::ENDL;
+//    lss << L("GVI.GetTypes: ") << ulhex(vehicleModel) << L(" -> ") << ulhex(&VIP) << L(" -> ") << ulhex(vehTypes) << UL::ENDL;
     return vehTypes;
 }
 

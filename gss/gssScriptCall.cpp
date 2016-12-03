@@ -9,6 +9,7 @@
 //
 //   13.09.2014 03:56 - created (moved out from gssMain)
 //   18.11.2016 01:00 - cleaned up scriptCallData stuff
+//   03.12.2016 19:42 - moved stc3 into IScriptThread class tree
 //
 
 
@@ -26,6 +27,7 @@
 #include "gssScriptCall.h"
 
 #include "gtaVersion.h"
+
 
 
 enum STCARGACTION {
@@ -80,6 +82,19 @@ SNCOMMAND snCmds[NUM_SN_COMMANDS] = {
 
 
 
+#define ARG_PTR_AFTER(x)        ((BYTE*)&(x) + sizeof(x))   //!! 32-bit stack machine code (va_start) !!//
+
+union ScriptArgPtr {
+    DWORD dword;
+    DWORD ptr;
+    DWORD* pdw;
+    FLOAT* pflt;
+    BOOL* pbool;
+    BYTE* pby;
+    CASTR casz;
+};
+
+
 
 
 
@@ -97,272 +112,396 @@ enum G30ScriptConst {
     G30_SCRIPT_NUM_LV_VARS = 16,
     G30_SCRIPT_NUM_LV_TIMERS = 2,
     G30_SCRIPT_NUM_LVARS_TOTAL = G30_SCRIPT_NUM_LV_VARS + G30_SCRIPT_NUM_LV_TIMERS,
+    G30_SCRIPT_VALUE_TYPE_LVAR_INDEX = 0x03,
+    G30_SCRIPT_STR8_SIZE = 8,
     // HARDCODED // DO NOT CHANGE //
 };
 
-union G3VCCONFLICTBLOCK {
-    struct {
-        BOOLBYTE condResult;
-        BOOLBYTE bIsMissionThread;
-        BOOLBYTE bWaitMessage;
-        BOOLBYTE z_unused7B;
-    } G3;
-    struct {
-        BOOLBYTE bIsActive;
-        BOOLBYTE condResult;
-        BOOLBYTE bIsMissionThread;
-        BOOLBYTE bWaitMessage;
-    } VC;
-};
-
-struct G30ScriptThreadContext {
-    // HARDCODED // DO NOT CHANGE //
-    G30ScriptThreadContext* pNext;
-    G30ScriptThreadContext* pPrev;
+struct GScriptThreadContextIII {
+    GScriptThreadContextIII* pNext;
+    GScriptThreadContextIII* pPrev;
     BYTE szName[G30_SCRIPT_NAME_SIZE];
     DWORD scriptIP;
     DWORD scriptStack[G30_SCRIPT_STACK_SIZE];
     WORD scriptSP;
-    WORD z_unused2E;
+    WORD zz002E;
     G30ScriptLVar scriptLocalVar[G30_SCRIPT_NUM_LVARS_TOTAL];
-    G3VCCONFLICTBLOCK Flags;
+    BOOLBYTE condResult;
+    BOOLBYTE bIsMissionThread;
+    BOOLBYTE bWaitMessage;
+    BOOLBYTE zz007B;
     DWORD wakeTime;
     WORD condOp;
     BOOLBYTE condNotFlag;
     BOOLBYTE bWastedBustedCheck;
     BOOLBYTE bWastedBustedFlag;
     BOOLBYTE bIsLoadedMissionThread;
-    WORD z_unused86;
-    // HARDCODED // DO NOT CHANGE //
+    WORD zz0086;
+};
+
+struct GScriptThreadContextVC {
+    GScriptThreadContextVC* pNext;
+    GScriptThreadContextVC* pPrev;
+    BYTE szName[G30_SCRIPT_NAME_SIZE];
+    DWORD scriptIP;
+    DWORD scriptStack[G30_SCRIPT_STACK_SIZE];
+    WORD scriptSP;
+    WORD zz002E;
+    G30ScriptLVar scriptLocalVar[G30_SCRIPT_NUM_LVARS_TOTAL];
+    BOOLBYTE bIsActive;
+    BOOLBYTE condResult;
+    BOOLBYTE bIsMissionThread;
+    BOOLBYTE bWaitMessage;
+    DWORD wakeTime;
+    WORD condOp;
+    BOOLBYTE condNotFlag;
+    BOOLBYTE bWastedBustedCheck;
+    BOOLBYTE bWastedBustedFlag;
+    BOOLBYTE bIsLoadedMissionThread;
+    WORD zz0086;
+};
+
+union GScriptThreadContext {
+    GScriptThreadContextIII iii;
+    GScriptThreadContextVC vc;
 };
 
 
-G30ScriptThreadContext stc3;
+#include "idecl.h"
 
-BOOLBYTE* pSTC3condResult;
+// GTA III Script Model
+class IScriptThread30 : public IScriptThread {
+public:
+    IENTRY DWORD ICALL getLVar(DWORD index) IPURE;
+    IENTRY void ICALL setLVar(DWORD index, DWORD value) IPURE;
+    IENTRY BOOL ICALL getCmdResult(void) IPURE;
+    IENTRY void ICALL pushOpCode(WORD code) IPURE;
+    IENTRY void ICALL pushLVarIndex(WORD index) IPURE;
+    IENTRY void ICALL pushStr8(CASTR str) IPURE;
+    IENTRY void ICALL execute(void) IPURE;
+};
+
+// GTA IV Script Model
+class IScriptThread40 : public IScriptThread {
+public:
+    // IScriptThread::invoke() only
+};
+
+
+
+#include "iimpl.h"
+
+class Script30 : public IScriptThread30 {
+protected:
+    GScriptThreadContext m_context;
+    BYTE m_cmdBuffer[128];
+    DWORD m_cmdOffsetIP;
+    DWORD m_cmdPos;
+    SNCOMMAND* m_pCmd;
+    DWORD* m_pArgs;
+#ifdef STC_DEBUG
+    void debugLVars(void);
+    void debugCmdBuf(void);
+#endif //STC_DEBUG
+    void addToCmdBuffer(DWORD prefix, size_t prefixSize, const void* dataPtr, size_t dataSize);
+    void cmdStart(SNCOMMAND* pcmd, DWORD* pArg);
+    BOOL cmdFinish(void);
+public:
+    IENTRY void ICALL setOffsetIP(DWORD offset) IPURE;
+    IENTRY BOOL ICALLVA invoke(DWORD commandIndex, ...) IPURE;
+};
+
+
+class ScriptIII : public Script30 {
+public:
+    IENTRY DWORD ICALL getLVar(DWORD index) IPURE;
+    IENTRY void ICALL setLVar(DWORD index, DWORD value) IPURE;
+    IENTRY BOOL ICALL getCmdResult(void) IPURE;
+    IENTRY void ICALL pushOpCode(WORD code) IPURE;
+    IENTRY void ICALL pushLVarIndex(WORD index) IPURE;
+    IENTRY void ICALL pushStr8(CASTR str) IPURE;
+    IENTRY void ICALL execute(void) IPURE;
+};
+
+class ScriptVC : public ScriptIII {
+public:
+    IENTRY DWORD ICALL getLVar(DWORD index) IPURE;
+    IENTRY void ICALL setLVar(DWORD index, DWORD value) IPURE;
+    IENTRY BOOL ICALL getCmdResult(void) IPURE;
+    //IENTRY void ICALL pushOpCode(WORD code) IPURE;
+    //IENTRY void ICALL pushLVarIndex(WORD index) IPURE;
+    //IENTRY void ICALL pushStr8(CASTR str) IPURE;
+    IENTRY void ICALL execute(void) IPURE;
+};
+
 
 
 //#define STC_DEBUG
 
-void stc3Init(DWORD gtaVersion)
-{
-    DWORD i;
-    stc3.pNext = NULL;
-    stc3.pPrev = NULL;
-    aszncpy((ASTR)&stc3.szName[0], "GSS", G30_SCRIPT_NAME_LEN);
-    stc3.scriptIP = 0;
-    for(i = 0; i < G30_SCRIPT_STACK_SIZE; i++)
-    {
-        stc3.scriptStack[i] = 0;
-    }
-    stc3.scriptSP = 0;
-    stc3.z_unused2E = 0;
-    for(i = 0; i < G30_SCRIPT_NUM_LVARS_TOTAL; i++)
-    {
-        stc3.scriptLocalVar[i].dword = 0;
-    }
-    if(gtaVersion == GTA_III)
-    {
-        stc3.Flags.G3.condResult = FALSE;
-        stc3.Flags.G3.bIsMissionThread = FALSE;
-        stc3.Flags.G3.bWaitMessage = FALSE;
-        stc3.Flags.G3.z_unused7B = FALSE;
-        pSTC3condResult = &stc3.Flags.G3.condResult;
-    }
-    else if(gtaVersion == GTA_VC)
-    {
-        stc3.Flags.VC.bIsActive = TRUE;
-        stc3.Flags.VC.condResult = FALSE;
-        stc3.Flags.VC.bIsMissionThread = FALSE;
-        stc3.Flags.VC.bWaitMessage = FALSE;
-        pSTC3condResult = &stc3.Flags.VC.condResult;
-    }
-    stc3.wakeTime = 0;
-    stc3.condOp = 0;
-    stc3.condNotFlag = FALSE;
-    stc3.bWastedBustedCheck = TRUE;
-    stc3.bWastedBustedFlag = FALSE;
-    stc3.bIsLoadedMissionThread = FALSE;
-    stc3.z_unused86 = 0;
-}
 
-void stc3Exec(void)
+ScriptIII scIII;
+ScriptVC scVC;
+
+IScriptThread* g_pIScript = nullptr;
+
+void GtaScriptInit(DWORD GtaVersion)
 {
-    BYTE* pfnPOC;
-    pfnPOC = g3i.pfnProcessOneCommand;
-#ifdef STC_DEBUG
-    lss << UL::DEBUG << L("== Exec ") << ulhex(pfnPOC) << L("(") << ulhex(&stc3) << L(") ==") << UL::ENDL;
-#endif //STC_DEBUG
-    __asm {
-        mov ecx, offset stc3;
-        call pfnPOC;
-        // no stack correction
+    switch(GtaVersion)
+    {
+    case GTA_III:
+        g_pIScript = &scIII;
+        break;
+    case GTA_VC:
+        g_pIScript = &scVC;
+        break;
     }
 }
 
-union ScriptArgPtr {
-    DWORD ptr;
-    DWORD* pdw;
-    FLOAT* pflt;
-    BOOL* pbool;
-    BYTE* pby;
-};
 
-
-
-DWORD dwCmdOffsetIP = 0;
-BYTE byCmdBuffer[128] = {0, }; // 2 + 16*(1+2)
-
-void stc3OffsetIP(DWORD offset)
-{
-    if(offset < 32)
-    {
-        dwCmdOffsetIP = offset;
-    }
-}
 
 
 #ifdef STC_DEBUG
-void stc3debugCmdBuf(void)
+void Script30::debugCmdBuf(void)
 {
-    lss << UL::DEBUG << L("CMDBUF:");
-    for(DWORD iByte = 0; iByte < 24; iByte += 4)
+    lss << UL::DEBUG << L("CMDBUF: ");
+    for(DWORD iByte = 0; iByte < m_cmdPos; iByte++)
     {
-        lss << L("  ") << ulhex(byCmdBuffer[iByte + 0]) << L(" ") << ulhex(byCmdBuffer[iByte + 1]) << L(" ") << ulhex(byCmdBuffer[iByte + 2]) << L(" ") << ulhex(byCmdBuffer[iByte + 3]);
+        lss << L(" ") << ulhex(m_cmdBuffer[iByte]);
     }
     lss << UL::ENDL;
 }
 
-void stc3debugLVars(void)
+void Script30::debugLVars(void)
 {
     lss << UL::DEBUG << L("LVAR:");
     for(DWORD iVar = 0; iVar < G30_SCRIPT_NUM_LV_VARS; iVar += 4)
     {
-        lss << L("  ") << ulhex(stc3.scriptLocalVar[iVar + 0].dword) << L(" ") << ulhex(stc3.scriptLocalVar[iVar + 1].dword);
-        lss << L(" ") << ulhex(stc3.scriptLocalVar[iVar + 2].dword) << L(" ") << ulhex(stc3.scriptLocalVar[iVar + 3].dword);
+        lss << L("  ") << ulhex(this->getLVar(iVar + 0)) << L(" ") << ulhex(this->getLVar(iVar + 1)) << L(" ") << ulhex(this->getLVar(iVar + 2)) << L(" ") << ulhex(this->getLVar(iVar + 3));
     }
     lss << UL::ENDL;
-    lss << UL::DEBUG << L("CondRes: ") << static_cast<DWORD>(*pSTC3condResult) << UL::ENDL;
+    lss << UL::DEBUG << L("CondRes: ") << this->getCmdResult() << UL::ENDL;
 }
 #endif //STC_DEBUG
 
 
-#define ARG_PTR_AFTER(x)        ((BYTE*)&(x) + sizeof(x))   //!! 32-bit stack machine code (va_start) !!//
-
-BOOL stc3Call(DWORD dwCommandIndex, ...)
+void Script30::setOffsetIP(DWORD offset)
 {
-    DWORD* pArg;
-    DWORD iArg;
-    DWORD argType;
-    ScriptArgPtr argPtr;
-    SNCOMMAND* pcmd;
-    DWORD numArgs;
-    BYTE* pArgType;
-    DWORD iCmdPos;
-    DWBYTE db;
-    DWORD iByte;
-
-    if(dwCommandIndex > NUM_SN_COMMANDS)
+    // executing cmd buffer with ip hack:
+    //
+    // gss:   ip = gssCmdBuffer - scriptDataBuffer
+    //
+    // gta: byte = scriptDataBuffer[ip]
+    //           = *(ip + scriptDataBuffer)
+    //           = *((gssCmdBuffer - scriptDataBuffer) + scriptDataBuffer)
+    //           = *(gssCmdBuffer)
+    //
+    if(offset < (sizeof(m_cmdBuffer) / 2))
     {
-        return FALSE;
+        m_cmdOffsetIP = offset;
     }
+}
 
-    // reset buffers
-    memset(&byCmdBuffer[0], 0xCC, sizeof(byCmdBuffer));
-    memset(&stc3.scriptLocalVar[0], 0xDD, sizeof(stc3.scriptLocalVar[0]) * G30_SCRIPT_NUM_LV_VARS);
+void Script30::addToCmdBuffer(DWORD prefix, size_t prefixSize, const void* dataPtr, size_t dataSize)
+{
+    if((m_cmdPos + prefixSize + dataSize) < sizeof(m_cmdBuffer))
+    {
+        if(prefixSize > 0)
+        {
+            memcpy(&m_cmdBuffer[m_cmdPos], &prefix, prefixSize);
+            m_cmdPos += prefixSize;
+        }
+        if(dataSize > 0)
+        {
+            memcpy(&m_cmdBuffer[m_cmdPos], dataPtr, dataSize);
+            m_cmdPos += dataSize;
+        }
+    }
+}
 
-    // setup pointers
-    pcmd = &snCmds[dwCommandIndex];
-    numArgs = pcmd->numArgs;
-    pArgType = &pcmd->argType[0];
-    pArg = (DWORD*) ARG_PTR_AFTER(dwCommandIndex);
+void Script30::cmdStart(SNCOMMAND* pcmd, DWORD* pArg)
+{
+    m_pCmd = pcmd;
+    m_pArgs = pArg;
+
+    m_cmdPos = m_cmdOffsetIP;
+
+    // set opcode
+    this->pushOpCode(m_pCmd->code);
 
     // load all args to lvars
-    // build cmd buffer
-    db.dword = pcmd->code;
-    iCmdPos = dwCmdOffsetIP;    // apply one-time ip offset
-    byCmdBuffer[iCmdPos+0] = db.byte[0];
-    byCmdBuffer[iCmdPos+1] = db.byte[1];
-    iCmdPos += 2;
-    for(iArg = 0; iArg < numArgs; iArg++)
+    for(DWORD iArg = 0; iArg < m_pCmd->numArgs; iArg++)
     {
-        argPtr.ptr = pArg[iArg];
-        argType = pArgType[iArg];
+        ScriptArgPtr argPtr;
+        argPtr.dword = m_pArgs[iArg];
+        DWORD cmdArgType = pcmd->argType[iArg];
 
-        if((argType & SAA_VALUE_READ) != 0)
+        if((cmdArgType & SAA_CMD_LVAR) != 0)
         {
-            if((argType & SAA_VALUE_CLEAR) == 0)
+            if((cmdArgType & SAA_VALUE_READ) != 0)
             {
-                stc3.scriptLocalVar[iArg].dword = argPtr.ptr;
+                if((cmdArgType & SAA_VALUE_CLEAR) == 0)
+                {
+                    this->setLVar(iArg, argPtr.dword);  // int or float
+                }
+                else
+                {
+                    this->setLVar(iArg, *argPtr.pdw);   // pointer to value to be cleared
+                }
             }
-            else    // "clear" arrives as pointer
-            {
-                stc3.scriptLocalVar[iArg].dword = *argPtr.pdw;
-            }
+
+            this->pushLVarIndex(iArg);
         }
 
-        if((argType & SAA_CMD_LVAR) != 0)
+        if((cmdArgType & SAA_CMD_STR8) != 0)
         {
-            db.dword = iArg;
-            byCmdBuffer[iCmdPos] = 0x03;    // value is LVar index (uint16)
-            byCmdBuffer[iCmdPos+1] = db.byte[0];
-            byCmdBuffer[iCmdPos+2] = db.byte[1];
-            iCmdPos += 3;
-        }
-
-        if((argType & SAA_CMD_STR8) != 0)
-        {
-            // [GTA III] String8 values are passed without type marker
-            for(iByte = 0; iByte < 8; iByte++)
-            {
-                byCmdBuffer[iCmdPos] = argPtr.pby[iByte];
-                iCmdPos++;
-            }
+            this->pushStr8(argPtr.casz);
         }
 
 #ifdef STC_DEBUG
-        stc3debugCmdBuf();
+        this->debugCmdBuf();
 #endif //STC_DEBUG
     }
-
-    // exec cmd buffer with ip hack
-    // gss:  ip = cmdBuffer - scriptDataBuffer
-    // g3: byte = scriptDataBuffer[ip]
-    //          = *(ip + scriptDataBuffer)
-    //          = *((byCmdBuffer - scriptDataBuffer) + scriptDataBuffer)
-    //          = *(byCmdBuffer)
-    stc3.scriptIP = &byCmdBuffer[dwCmdOffsetIP] - g3i.pbyScriptDataBuffer;  // apply one-time ip offset
-
 #ifdef STC_DEBUG
-    stc3debugLVars();
-    lss << UL::INFO << L("== executing buffer ") << ulhex(byCmdBuffer) << L(" as ip ") << ulhex(stc3.scriptIP) << L(" ==") << UL::ENDL;
+    this->debugLVars();
 #endif //STC_DEBUG
+}
 
-    stc3Exec();
-
-#ifdef STC_DEBUG
-    stc3debugLVars();
-#endif //STC_DEBUG
+BOOL Script30::cmdFinish(void)
+{
+    ScriptArgPtr argPtr;
+    DWORD numArgs = m_pCmd->numArgs;
 
     // store lvars back to args
-    for(iArg = 0; iArg < numArgs; iArg++)
+    for(DWORD iArg = 0; iArg < numArgs; iArg++)
     {
-        argPtr.ptr = pArg[iArg];
-        argType = pArgType[iArg];
+        argPtr.ptr = m_pArgs[iArg];
+        DWORD cmdArgType = m_pCmd->argType[iArg];
 
-        if((argType & SAA_VALUE_WRITE) != 0)
+        if((cmdArgType & SAA_VALUE_WRITE) != 0)
         {
-            *argPtr.pdw = stc3.scriptLocalVar[iArg].dword;
+            *argPtr.pdw = this->getLVar(iArg);
         }
 
-        if((argType & SAA_VALUE_CLEAR) != 0)
+        if((cmdArgType & SAA_VALUE_CLEAR) != 0)
         {
             *argPtr.pdw = 0;
         }
     }
+#ifdef STC_DEBUG
+    this->debugLVars();
+#endif //STC_DEBUG
 
-    dwCmdOffsetIP = 0;
+    m_cmdOffsetIP = 0;
 
-    return (BOOL) *pSTC3condResult;
+    return this->getCmdResult();
 }
+
+BOOL Script30::invoke(DWORD commandIndex, ...)
+{
+    DWORD* pArg;
+    SNCOMMAND* pcmd;
+
+    // setup pointers
+    pArg = (DWORD*) ARG_PTR_AFTER(commandIndex);
+    pcmd = &snCmds[commandIndex];
+
+#ifdef STC_DEBUG
+    lss << UL::INFO << L("== III == invoke ==") << UL::ENDL;
+#endif //STC_DEBUG
+
+    this->cmdStart(pcmd, pArg);
+
+    this->execute();
+
+    return this->cmdFinish();
+}
+
+
+
+DWORD ScriptIII::getLVar(DWORD index)
+{
+    return m_context.iii.scriptLocalVar[index].dword;
+}
+
+DWORD ScriptVC::getLVar(DWORD index)
+{
+    return m_context.vc.scriptLocalVar[index].dword;
+}
+
+
+
+void ScriptIII::setLVar(DWORD index, DWORD value)
+{
+    m_context.iii.scriptLocalVar[index].dword = value;
+}
+
+void ScriptVC::setLVar(DWORD index, DWORD value)
+{
+    m_context.vc.scriptLocalVar[index].dword = value;
+}
+
+
+
+BOOL ScriptIII::getCmdResult(void)
+{
+    return m_context.iii.condResult;
+}
+
+BOOL ScriptVC::getCmdResult(void)
+{
+    return m_context.vc.condResult;
+}
+
+
+
+void ScriptIII::execute(void)
+{
+    // exec cmd buffer with ip hack
+    m_context.iii.scriptIP = &m_cmdBuffer[m_cmdOffsetIP] - GtaGetScriptDataBuffer();     // apply one-time ip offset
+
+#ifdef STC_DEBUG
+    lss << UL::INFO << L("== III == executing buffer ") << ulhex(m_cmdBuffer) << L(" as ip ") << ulhex(m_context.iii.scriptIP) << L(" ==") << UL::ENDL;
+#endif //STC_DEBUG
+
+    GtaExecScriptCommand(&m_context.iii);
+}
+
+void ScriptVC::execute(void)
+{
+    // exec cmd buffer with ip hack
+    m_context.vc.scriptIP = &m_cmdBuffer[m_cmdOffsetIP] - GtaGetScriptDataBuffer();     // apply one-time ip offset
+
+#ifdef STC_DEBUG
+    lss << UL::INFO << L("== VC == executing buffer ") << ulhex(m_cmdBuffer) << L(" as ip ") << ulhex(m_context.vc.scriptIP) << L(" ==") << UL::ENDL;
+#endif //STC_DEBUG
+
+    GtaExecScriptCommand(&m_context.vc);
+}
+
+
+
+void ScriptIII::pushOpCode(WORD code)
+{
+    this->addToCmdBuffer(code, sizeof(WORD), nullptr, 0);
+}
+
+// VC: reuse III
+
+
+void ScriptIII::pushLVarIndex(WORD index)
+{
+    this->addToCmdBuffer(G30_SCRIPT_VALUE_TYPE_LVAR_INDEX, sizeof(BYTE), &index, sizeof(WORD));
+}
+
+// VC: reuse III
+
+
+void ScriptIII::pushStr8(CASTR str)
+{
+    // [III][VC] String8 values are passed without type marker
+    this->addToCmdBuffer(0, 0, str, G30_SCRIPT_STR8_SIZE);
+}
+
+// VC: reuse III
+
 

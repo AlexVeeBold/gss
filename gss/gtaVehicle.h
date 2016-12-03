@@ -57,6 +57,8 @@ public:
 
 IVehicle* GtaVehicleInit(DWORD GtaVersion);
 
+DWORD GenerateFreeVehicleSpec(VehSpec vehSpec, const FloatAngledVector3& pos);
+
 
 /*
 VEHLIC31* GetFreeVehicleLicense(void);

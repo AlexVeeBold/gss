@@ -213,8 +213,9 @@ void gssInit(void)
     {
         randomSeed();
         gssGtaVer = GtaVer;
-        stc3Init(GtaVer);
-        //GtaVehicleInit(GtaVer);
+//        stc3Init(GtaVer);
+        GtaScriptInit(GtaVer);
+        //GtaVehicleInit(GtaVer);//moved to parkSys
         parkSysInit(GtaVer);
         if(GtaVer == GTA_III)
         {

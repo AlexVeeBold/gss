@@ -67,12 +67,10 @@ DWORD mqEnqueueModel(MODELQUEUE* pMQ, DWORD model)
         ///ulogf(UL_INFO, "checking model %08X", dwModel);
         if(SN::ASSET::HAS_MODEL_LOADED(model) == FALSE)
         {
-//            ulogf(UL_INFO, T("requesting model %08X"), model);
             lss << UL::INFO << L("requesting model ") << model << UL::ENDL;
             mdlState = MDS_REQUESTED;
             SN::ASSET::REQUEST_MODEL(model);
-//            ulogf(UL_INFO, T("model is requested"));
-            lss << UL::INFO << L("model is requested") << UL::ENDL;
+            lss << UL::INFO << L("model has been requested") << UL::ENDL;
         }
         pEntry->state = mdlState;
         // increase model queue length
@@ -96,9 +94,7 @@ BOOL mqAreModelsStillLoading(MODELQUEUE* pMQ)
     {
         pEntry = &pMQ->mqEntry[iMQSlot];
         bLoadingModel = FALSE;
-//        ulogf(UL_INFO, T("checking model %08X"), pEntry->model);
-//        lss << UL::INFO << L("checking model ") << ulhex(pEntry->model) << UL::ENDL;
-        lss << UL::INFO << L("checking model ") << ulhex(pEntry->model) << L(" : ");
+        lss << UL::INFO << L("checking model [") << iMQSlot << L("] ") << ulhex(pEntry->model) << L(" : ") << pEntry->state << L(" : ");
         if(pEntry->state == MDS_REQUESTED)
         {
             bLoadingModel = (SN::ASSET::HAS_MODEL_LOADED(pEntry->model) == FALSE);
@@ -107,10 +103,8 @@ BOOL mqAreModelsStillLoading(MODELQUEUE* pMQ)
                 pEntry->state = MDS_LOADED;
             }
         }
-        // is any model not loaded yet?
+        // is there any model that is not loaded yet?
         bStillLoading |= bLoadingModel;
-//        ulogf(UL_INFO, T("still loading = %d"), bStillLoading);
-//        lss << UL::INFO << L("still loading = ") << bStillLoading << UL::ENDL;
         lss << UL::INFO << (bLoadingModel == FALSE) << UL::ENDL;
     }
     return bStillLoading;

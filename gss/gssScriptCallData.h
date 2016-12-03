@@ -32,11 +32,11 @@ SNCxVOID(DELETE_CAR,            0x00A6, 0x7F71342D,  void,      NAR(1a, ARPK( VE
     SNC_TYPE(void) DELETE_CAR( AD_N(ARGC_1a, ARPK( VEHICLE_CLEAR(pVehicle) ))) { SNC_CALL(SNC_NAME(DELETE_CAR),  CA_N(ARGC_1a, ARPK( VEHICLE_CLEAR(pVehicle) ))); }
     SNC_TYPE(void) DELETE_CAR(     AD_NUM(1, ARPK( VEHICLE_CLEAR(pVehicle) ))) { SNC_CALL(SNC_NAME(DELETE_CAR),      CA_NUM(1, ARPK( VEHICLE_CLEAR(pVehicle) ))); }
     SNC_TYPE(void) DELETE_CAR(          DEF1_ARPK( VEHICLE_CLEAR(pVehicle) ))  { SNC_CALL(SNC_NAME(DELETE_CAR),           ARG1_ARPK( VEHICLE_CLEAR(pVehicle) )); }
-    SNC_TYPE(void) DELETE_CAR(              SNC_AD(VEHICLE_CLEAR(pVehicle)))   { SNC_CALL(SNC_NAME(DELETE_CAR),               SNC_CA(VEHICLE_CLEAR(pVehicle))); }
-    SNC_TYPE(void) DELETE_CAR(             SNC_DEF_VEHICLE_CLEAR(pVehicle))    { SNC_CALL(SNC_NAME(DELETE_CAR),              SNC_ARG_VEHICLE_CLEAR(pVehicle)); }
-    SNC_TYPE(void) DELETE_CAR(                          Vehicle* pVehicle)     { SNC_CALL(SNC_NAME(DELETE_CAR),                 SNC_ARG_HANDLE_PTR(pVehicle)); }
-    SNC_TYPE(void) DELETE_CAR(                          Vehicle* pVehicle)     { SNC_CALL(SNC_NAME(DELETE_CAR),                         (DWORD) &(*pVehicle)); }
-__forceinline void DELETE_CAR(                          Vehicle* pVehicle)     { stc3Call(    SNCMD_DELETE_CAR,                         (DWORD) &(*pVehicle)); }
+    SNC_TYPE(void) DELETE_CAR(              SNC_AD(VEHICLE_CLEAR(pVehicle)))   { SNC_CALL(SNC_NAME(DELETE_CAR),               SNC_CA(VEHICLE_CLEAR(pVehicle) )); }
+    SNC_TYPE(void) DELETE_CAR(             SNC_DEF_VEHICLE_CLEAR(pVehicle))    { SNC_CALL(SNC_NAME(DELETE_CAR),              SNC_ARG_VEHICLE_CLEAR(pVehicle) ); }
+    SNC_TYPE(void) DELETE_CAR(                          Vehicle* pVehicle)     { SNC_CALL(SNC_NAME(DELETE_CAR),                 SNC_ARG_HANDLE_PTR(pVehicle) ); }
+    SNC_TYPE(void) DELETE_CAR(                          Vehicle* pVehicle)     { SNC_CALL(SNC_NAME(DELETE_CAR),                         (DWORD) &(*pVehicle) ); }
+__forceinline void DELETE_CAR(                          Vehicle* pVehicle)     { stc3Call(    SNCMD_DELETE_CAR,                         (DWORD) &(*pVehicle) ); }
 
 
             script command arguments' types macro-unwrapping:

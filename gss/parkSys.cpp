@@ -310,6 +310,24 @@ void SSPSX::parkSysGrantFreeVehicles(void)
             }
         }
     }*/
+    for(DWORD iPark = 0; iPark < this->m_numParks; iPark++)
+    {
+        PARKINGLOT& park = m_park[iPark];
+        PARKSPACEINFO& space = park.space[0];
+        VehSpec vehSpec = &park.vehSpecLocal[0];
+        FloatAngledVector3 pos;
+        pos.pos = space.pos;
+        pos.angle = space.angle;
+        DWORD model = GenerateFreeVehicleSpec(vehSpec, pos);
+        BYTE vehTypes = this->VehInfo.getVehicleTypes(model);
+        BYTE allowedTypes = space.vehTypesAllowed;
+        lss << UL::INFO << L("grantFreeVehicle[") << iPark << L("]: (") << ulhex(vehTypes) << L("&") << ulhex(allowedTypes) << L(")==") << ulhex(static_cast<BYTE>(vehTypes & allowedTypes)) << UL::ENDL;
+//            ulogf(UL_INFO, T("grantFreeVehicle(%d): (%02X&%02X)==%02X"), iPark, vehTypesAllowed, vehTypeFree, (vehTypesAllowed & vehTypeFree));
+        if((vehTypes & allowedTypes) == 0)
+        {
+            this->pIVehicle->clearSpec(vehSpec);
+        }
+    }
 }
 
 void SSPSX::parkingSpaceInitMarkerInfo(PARKSPACEINFO& space)

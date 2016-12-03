@@ -11,6 +11,8 @@
 //   23.11.2014 18:27 - moving signature data into one array (while adding VC signatures)
 //   25.11.2014 16:20 - added more VC signatures
 //   29.11.2016 22:27 - moved signatures & connector to gtaScan
+//   02.12.2016 00:26 - added GtaExecScriptCommand
+//   03.12.2016 23:01 - added GtaGetScriptDataBuffer & GtaGetGameTime
 //
 
 
@@ -197,6 +199,29 @@ void GtaDrawMarker1(DWORD markerIndex, DWORD markerType, FloatVector3* pPos, FLO
 }
 
 
+void GtaExecScriptCommand(void* pScriptContext)
+{
+    BYTE* pfnPOC = g3i.pfnProcessOneCommand;
+#ifdef STC_DEBUG
+    lss << UL::DEBUG << L("== Exec ") << ulhex(pfnPOC) << L("(") << ulhex(pScriptContext) << L(") ==") << UL::ENDL;
+#endif //STC_DEBUG
+    __asm {
+        mov ecx, pScriptContext;
+        call pfnPOC;
+        // no stack correction
+    }
+}
+
+BYTE* GtaGetScriptDataBuffer(void)
+{
+    return g3i.pbyScriptDataBuffer;
+}
+
+DWORD GtaGetGameTime(void)
+{
+    return *g3i.pdwGameTime;
+}
+
 
 
 
@@ -204,7 +229,7 @@ void GtaDrawMarker1(DWORD markerIndex, DWORD markerType, FloatVector3* pPos, FLO
 
 //////// //////// //////// //////// TheScripts signal interceptor //////// //////// //////// //////// 
 
-#define SC_DEBUG
+//#define SC_DEBUG
 
 
 #ifdef SC_DEBUG
