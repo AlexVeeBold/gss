@@ -34,7 +34,7 @@ void randomSeed(void)
 
 DWORD randomValue(void)
 {
-    // Lehmer random number generator a.k.a. Park�Miller random number generator
+    // Lehmer random number generator a.k.a. Park–Miller random number generator
     rngValue = (DWORD)( ((QWORD)rngValue * 48271) % 2147483647 );
     return rngValue;
 }

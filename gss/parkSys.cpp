@@ -289,27 +289,6 @@ void SSPSX::init(DWORD gtaVersion)
 
 void SSPSX::parkSysGrantFreeVehicles(void)
 {
-/*    DWORD iPark;
-    PARKINGLOT* pPark;
-    VEHLIC31* pFreeVehLicense;
-    BYTE vehTypeFree;
-    BYTE vehTypesAllowed;
-    // Hey! It's a free vehicle day!
-    for(iPark = 0; iPark < this->numParks; iPark++)
-    {
-        pPark = &this->park[iPark];
-        pFreeVehLicense = GetFreeVehicleLicense();
-        if(pFreeVehLicense != nullptr)
-        {
-            vehTypeFree = VehicleGetTypes(pFreeVehLicense->model);
-            vehTypesAllowed = pPark->space[0].vehTypesAllowed;
-            ulogf(UL_INFO, T("grantFreeVehicle(%d): (%02X&%02X)==%02X"), iPark, vehTypesAllowed, vehTypeFree, (vehTypesAllowed & vehTypeFree));
-            if((vehTypesAllowed & vehTypeFree) != 0)
-            {
-                pPark->vehLicense[0] = *pFreeVehLicense;
-            }
-        }
-    }*/
     for(DWORD iPark = 0; iPark < this->m_numParks; iPark++)
     {
         PARKINGLOT& park = m_park[iPark];
@@ -321,8 +300,7 @@ void SSPSX::parkSysGrantFreeVehicles(void)
         DWORD model = GenerateFreeVehicleSpec(vehSpec, pos);
         BYTE vehTypes = this->VehInfo.getVehicleTypes(model);
         BYTE allowedTypes = space.vehTypesAllowed;
-        lss << UL::INFO << L("grantFreeVehicle[") << iPark << L("]: (") << ulhex(vehTypes) << L("&") << ulhex(allowedTypes) << L(")==") << ulhex(static_cast<BYTE>(vehTypes & allowedTypes)) << UL::ENDL;
-//            ulogf(UL_INFO, T("grantFreeVehicle(%d): (%02X&%02X)==%02X"), iPark, vehTypesAllowed, vehTypeFree, (vehTypesAllowed & vehTypeFree));
+//        lss << UL::INFO << L("grantFreeVehicle[") << iPark << L("]: (") << ulhex(vehTypes) << L("&") << ulhex(allowedTypes) << L(")==") << ulhex(static_cast<BYTE>(vehTypes & allowedTypes)) << UL::ENDL;
         if((vehTypes & allowedTypes) == 0)
         {
             this->pIVehicle->clearSpec(vehSpec);

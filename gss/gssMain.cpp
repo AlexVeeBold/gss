@@ -138,44 +138,46 @@ void gssProcess(void)
             ss << " CVeh:" << std::hex << (DWORD)(pCVehicle) << std::dec;
             ss << " m:" << std::hex << std::setfill('0') << std::setw(4) << *(WORD*)((BYTE*)pCVehicle + 0x5C) << std::dec;
 
-            INT type = -1;
-            if(gssGtaVer == GTA_III)
-            {
-                type = *(INT*)((BYTE*)pCVehicle + 0x284);
-            }
-            if(gssGtaVer == GTA_VC)
-            {
-                type = *(INT*)((BYTE*)pCVehicle + 0x29C);
-            }
-            ss << " T:" << type;
+            //INT type = -1;
+            //if(gssGtaVer == GTA_III)
+            //{
+            //    type = *(INT*)((BYTE*)pCVehicle + 0x284);
+            //}
+            //if(gssGtaVer == GTA_VC)
+            //{
+            //    type = *(INT*)((BYTE*)pCVehicle + 0x29C);
+            //}
+            //ss << " T:" << type;
 
-            DWORD gear = 0;
-            if(gssGtaVer == GTA_III)
-            {
-                gear = *(BYTE*)((BYTE*)pCVehicle + 0x204);
-            }
-            if(gssGtaVer == GTA_VC)
-            {
-                gear = *(BYTE*)((BYTE*)pCVehicle + 0x208);
-            }
-            ss << " G:" << gear;
+            //DWORD gear = 0;
+            //if(gssGtaVer == GTA_III)
+            //{
+            //    gear = *(BYTE*)((BYTE*)pCVehicle + 0x204);
+            //}
+            //if(gssGtaVer == GTA_VC)
+            //{
+            //    gear = *(BYTE*)((BYTE*)pCVehicle + 0x208);
+            //}
+            //ss << " G:" << gear;
+
             //FLOAT speed;
             //FLOAT pedal;
             //speed = *(FLOAT*)((BYTE*)pCVehicle + 0x514);
             //pedal = *(FLOAT*)((BYTE*)pCVehicle + 0x594);
             //ss << "(" << speed << ")(" << pedal << ")";
-            FLOAT rotX;
-            FLOAT rotY;
-            FLOAT rotZ;
-            rotX = *(FLOAT*)((BYTE*)pCVehicle + 0x14);
-            rotY = *(FLOAT*)((BYTE*)pCVehicle + 0x18);
-            rotZ = *(FLOAT*)((BYTE*)pCVehicle + 0x1C);
-            ss << " R(" << rotX << ")(" << rotY << ")(" << rotZ << ")";
+  //          FLOAT rotX;
+  //          FLOAT rotY;
+  //          FLOAT rotZ;
+  //          rotX = *(FLOAT*)((BYTE*)pCVehicle + 0x14);
+  //          rotY = *(FLOAT*)((BYTE*)pCVehicle + 0x18);
+  //          rotZ = *(FLOAT*)((BYTE*)pCVehicle + 0x1C);
+  //          ss << " R(" << rotX << ")(" << rotY << ")(" << rotZ << ")";
 
             playerState.bIsInCar = TRUE;
             SN::VEHICLE::GET_CAR_COORDINATES(playerState.vehiclePlayer, &playerState.fvPosVehicle);
             SN::VEHICLE::GET_CAR_HEADING(playerState.vehiclePlayer, &playerState.fHeadingVehicle);
             //ss << ", pos(" << playerState.fvPosVehicle.X << ", " << playerState.fvPosVehicle.Y << ", " << playerState.fvPosVehicle.Z << "; " << playerState.fHeadingVehicle << ")";
+            //ss << ", h(" << playerState.fHeadingVehicle << ")";
         }
 
         ss << ";";
@@ -183,6 +185,28 @@ void gssProcess(void)
         parkSysStateMachine(ss, playerState);
         //zoneStateMachine(ss, playerState);
     }
+
+    FloatVector3 fvSpherePos;
+  //  ByteVector3 rgbSphereColor;
+    if(playerState.bIsInCar)
+    {
+        fvSpherePos = playerState.fvPosVehicle;
+  //      rgbSphereColor.dw = 0x00FF00;
+    }
+    else
+    {
+        fvSpherePos = playerState.fvPosChar;
+  //      rgbSphereColor.dw = 0x0000FF;
+    }
+  //  SN::MARKER::DRAW_CORONA(37, fvSpherePos, 1.0f, 5, false, rgbSphereColor);
+    FLOAT groundZ;
+    SN::WORLD::GET_GROUND_Z_FOR_3D_COORD(fvSpherePos, &groundZ);
+    FLOAT originHeight = fvSpherePos.Z - groundZ;
+  //  fvSpherePos.Z = groundZ;
+  //  rgbSphereColor.dw = 0xFF0000;
+  //  SN::MARKER::DRAW_CORONA(38, fvSpherePos, 1.0f, 5, false, rgbSphereColor);
+    ss << "; z:" << originHeight << ", " << groundZ;
+
     //
     GtaDrawString(ss.str(), gtaFont);
 }

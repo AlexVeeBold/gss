@@ -702,6 +702,7 @@ IVehicle* GtaVehicleInit(DWORD GtaVersion)
 
 
 struct FreeVeh30 {
+    FLOAT modelCenterHeight;
     DWORD model;
     BYTE color1;
     BYTE color2;
@@ -709,18 +710,35 @@ struct FreeVeh30 {
     BYTE variation2;
     BYTE proofs;
     BYTE radiostation;
+    WORD zpadding;
 };
 
 FreeVeh30 kuruma = {
+    0.90625f,
     VM_III_KURUMA,  // Kuruma
     0x3A, 0x01,     // aqua / white
     0xFF, 0xFF,     // no variations
     0x00, 0x0B,     // no proofs, radio off
 };
 FreeVeh30 cheetah = {
+    0.828125f,
     VM_VC_CHEETAH,  // Cheetah
     0x34, 0x34,     // dark blue / dark blue
     0x01, 0xFF,     // with side mirrors
+    0x00, 0x0A,     // no proofs, radio off
+};
+FreeVeh30 stingerYellow = {
+    0.796875f,
+    VM_VC_STINGER,  // Stinger
+    0x06, 0x06,     // yellow / yellow
+    0xFF, 0xFF,     // no variations
+    0x00, 0x0A,     // no proofs, radio off
+};
+FreeVeh30 stingerPurple = {
+    0.796875f,
+    VM_VC_STINGER,  // Stinger
+    0x05, 0x05,     // purple / purple
+    0xFF, 0xFF,     // no variations
     0x00, 0x0A,     // no proofs, radio off
 };
 
@@ -734,7 +752,21 @@ DWORD GenerateFreeVehicleSpec(VehSpec vehSpec, const FloatAngledVector3& pos)
         pFreeVeh = &kuruma;
         break;
     case GTA_VC:
-        pFreeVeh = &cheetah;
+        switch(randomValueUpTo(3))
+        {
+        case 0:
+            lss << UL::DEBUG << L("genVeh: vc 0") << UL::ENDL;
+            pFreeVeh = &cheetah;
+            break;
+        case 1:
+            lss << UL::DEBUG << L("genVeh: vc 1") << UL::ENDL;
+            pFreeVeh = &stingerYellow;
+            break;
+        case 2:
+            lss << UL::DEBUG << L("genVeh: vc 2") << UL::ENDL;
+            pFreeVeh = &stingerPurple;
+            break;
+        }
         break;
     }
 
@@ -744,15 +776,16 @@ DWORD GenerateFreeVehicleSpec(VehSpec vehSpec, const FloatAngledVector3& pos)
         GtaMatrix4 mat;
         mat.m41 = pos.pos.X;
         mat.m42 = pos.pos.Y;
-        mat.m43 = pos.pos.Z + 2.0f;     //tmp
+        mat.m43 = pos.pos.Z + pFreeVeh->modelCenterHeight;
         // rot x = { 0°:  0.0, 90°: -1.0, 180°:  0.0, 270°: +1.0 } = -sin()
         // rot y = { 0°: +1.0, 90°:  0.0, 180°: -1.0, 270°:  0.0 } =  cos()
         // rot z = 0.0
         mat.m21 = -sinf(angleRad);
         mat.m22 = cosf(angleRad);
         mat.m23 = 0.0f;
-        lss << UL::DEBUG << L("genVeh: p:(") << pos.pos.X << L(", ") << pos.pos.Y << L(", ") << pos.pos.Z << L(") ");
-        lss << L(" a:") << pos.angle << L(" aRad:") << angleRad << L(" r:(") << mat.m21 << L(", ") << mat.m22 << L(", ") << mat.m23 << L(")") << UL::ENDL;
+//        lss << UL::DEBUG << L("genVeh: p:(") << pos.pos.X << L(", ") << pos.pos.Y << L(", ") << pos.pos.Z << L(")");
+//        lss << L("  a:") << pos.angle << L(" aRad:") << angleRad;
+//        lss << L("  r:(") << mat.m21 << L(", ") << mat.m22 << L(", ") << mat.m23 << L(")") << UL::ENDL;
 
         GVeh30* pVeh30 = static_cast<GVeh30*>(vehSpec);
         pVeh30->model = pFreeVeh->model;

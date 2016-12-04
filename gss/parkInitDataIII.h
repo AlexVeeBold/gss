@@ -23,7 +23,6 @@
 // Portland
 //
 
-//#define PARKID  GTAPARKID(RLDB)     // rldb     Red lights district, flats block [inside a VERY secluded area]
 #define PARKID  RLDB     // rldb     Red lights district, flats block [inside a VERY secluded area]
 PARK(
     BBOX(
@@ -41,7 +40,6 @@ PARK(
 )
 #undef PARKID
 
-//#define PARKID  GTAPARKID(PBCH)     // pbch     Portland Beach
 #define PARKID  PBCH     // pbch     Portland Beach
 PARK(
     BBOX(
@@ -50,7 +48,7 @@ PARK(
     ),
     ROW(
         D0, IPD_VT_WATER_III, 1,
-        FV4( 1524.625, -467.75, -0.75, 15.0 ),
+        FV4( 1524.625, -467.75, -0.5, 15.0 ),
         FV4( 0.0, 0.0, +8.0, 0.0 )
     ),
     NONE,
@@ -59,17 +57,8 @@ PARK(
 )
 #undef PARKID
 
-/*
-ZOBBOX
-07:51:50.843: [INFO] zone inner: 1210.000000, -722.125000, 0.000000,   1397.500000, -529.750000, 100.000000,   58.250000, 54.750000
-07:51:50.843: [INFO] zone outer: 1183.625000, -747.625000, 0.000000,   1412.250000, -513.875000, 100.000000,   77.250000, 72.500000
-*/
 #define PARKID  PVSS     // pvss     Portland View, Supa Save
 PARK(
-    //BBOX(
-    //    1227.0, -735.0, 12.0,  1340.0, -573.0, 22.0,
-    //    1210.0, -745.0, 11.0,  1350.0, -569.0, 27.0,
-    //),
     ZOBBOX(
         1210.0,   -722.125, 12.0,  1397.5,  -529.75,  22.0,  58.25, 54.75,
         1183.625, -747.625, 11.0,  1412.25, -513.875, 27.0,  77.25, 72.5
@@ -173,7 +162,7 @@ PARK(
     NONE
 )
 #undef PARKID
-///
+//
 //  Staunton, Newport, Multistory Car Park
 //      35.234      ______                  +2.402
 //                        \____x_ 32.832    +2.401
@@ -183,7 +172,7 @@ PARK(
 //
 //    low  lane z:  24.000  | 25.000 ... 30.375 |  30.500
 //    high lane z:  30.375  | 30.500 ... 42.000 |  47.000
-///
+//
 #define PARKID  NMSPH    // nmsph    Newport Multistory Car Park (high)
 PARK(
     BBOX(

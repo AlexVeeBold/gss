@@ -334,23 +334,4 @@ void getInitialParkingData(DWORD GtaVersion, DataBuffer& ipd)
         break;
     }
 }
-//void* getInitialParkingData(DWORD GtaVersion, DWORD* pdwDataSize)
-//{
-//    void* dataPtr = NULL;
-//    DWORD dataSize = 0;
-//    if(GtaVersion == GTA_III)
-//    {
-//        dataPtr = &initialParkDataIII;
-//        dataSize = sizeof(initialParkDataIII);
-//    }
-//    else if(GtaVersion == GTA_VC)
-//    {
-//        dataPtr = &initialParkDataVC;
-//        dataSize = sizeof(initialParkDataVC);
-//    }
-//    *pdwDataSize = dataSize;
-//    return dataPtr;
-//}
-
-
 
