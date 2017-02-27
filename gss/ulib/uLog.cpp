@@ -16,6 +16,9 @@
 //   20.11.2016 14:02 - polished & cleaned up
 //
 
+#include <cstdint>
+#include <fstream>
+
 #define WIN32_LEAN_AND_MEAN     // Exclude rarely-used stuff from Windows headers
 #include <windows.h>
 
@@ -83,11 +86,19 @@ void ulogss::logEnd(void)
     ss << std::setfill(L('0'));
 
     ::EnterCriticalSection(&g_csLog);
-    ::HANDLE hLogFile;
-    hLogFile = ::CreateFile(m_fileName.c_str(), GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-    DWORD dwDummy = ::GetLastError();
-    ::SetLastError(0);    // clear "file already exists" error
-    if(hLogFile != INVALID_HANDLE_VALUE)
+//    ::HANDLE hLogFile;
+//    hLogFile = ::CreateFile(m_fileName.c_str(), GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+//    DWORD dwDummy = ::GetLastError();
+//    ::SetLastError(0);    // clear "file already exists" error
+    std::ios_base::openmode fileMode = std::ios::binary;
+    if((m_flags & UL_FLAGS::SINGLE_FILE_APPEND) || (m_bFirstOutput == FALSE))
+    {
+        fileMode |= std::ios::ate;
+    }
+
+    std::ofstream logFile(m_fileName, fileMode);
+//    if(hLogFile != INVALID_HANDLE_VALUE)
+    if(logFile.is_open())
     {
         SYSTEMTIME st;
         if(m_flags & (UL_FLAGS::PRINT_HEADER | UL_FLAGS::PRINT_TIME))
@@ -102,17 +113,19 @@ void ulogss::logEnd(void)
             }
         }
         
-        if((m_flags & UL_FLAGS::SINGLE_FILE_APPEND) || (m_bFirstOutput == FALSE))
-        {
-            ::SetFilePointer(hLogFile, 0, NULL, FILE_END);  // move to end of file
-        }
+//        if((m_flags & UL_FLAGS::SINGLE_FILE_APPEND) || (m_bFirstOutput == FALSE))
+//        {
+//            ::SetFilePointer(hLogFile, 0, NULL, FILE_END);  // move to end of file
+//        }
 
         if(m_bFirstOutput != FALSE)
         {
             if(m_flags & UL_FLAGS::SINGLE_FILE_APPEND)
             {
-                DWORD dwSize = ::GetFileSize(hLogFile, NULL);
-                if(dwSize != 0)
+//                DWORD dwSize = ::GetFileSize(hLogFile, NULL);
+//                if(dwSize != 0)
+                std::intmax_t logFileSize = logFile.tellp();
+                if(logFileSize != 0)
                 {
                     ss << eol << eol;
                 }
@@ -167,9 +180,11 @@ void ulogss::logEnd(void)
         int nLen;
         nLen = outStr.size();
         //write buffer to file
-        ULONG ulDummy;
-        ::WriteFile(hLogFile, outStr.c_str(), outStr.size(), &ulDummy, NULL);
-        ::CloseHandle(hLogFile);
+//        ULONG ulDummy;
+//        ::WriteFile(hLogFile, outStr.c_str(), outStr.size(), &ulDummy, NULL);
+//        ::CloseHandle(hLogFile);
+        logFile.write(outStr.c_str(), outStr.length());
+        logFile.close();
 
         // clear stringstream
         this->m_strStream.str(L(""));

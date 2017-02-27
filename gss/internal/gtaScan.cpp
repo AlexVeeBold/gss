@@ -10,11 +10,10 @@
 //   29.11.2016 22:18 - created (moved out from gssInterface)
 //
 
-#include "uDef.h"
-#include "tunic.h"
-#include "tstr.h"
-#include "uLog.h"
-#include "uMemory.h"
+#include <ulib/uDef.h>
+#include <ulib/tunic.h>
+#include <ulib/uLog.h>
+#include <ulib/uMemory.h>
 
 #include "gssDef.h"
 #include "gssSign.h"

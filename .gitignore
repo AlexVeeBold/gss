@@ -7,6 +7,8 @@ mkar.bat
 *.vcxproj
 *.vcxproj.filters
 _doc/
+_[Bb]uild/
+PreProc/
 *.!
 
 ## Ignore Visual Studio temporary files, build results, and

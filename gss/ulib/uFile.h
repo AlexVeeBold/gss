@@ -9,6 +9,7 @@
 //
 //   04.01.2013 06:49 - created (copied from uCrt)
 //   20.11.2016 03:31 - changed void* to BYTE*
+//   27.02.2017 12:51 - moved to std types
 //
 
 // using tunic.h
@@ -16,12 +17,13 @@
 #ifndef _MICROMEMFILE_H_INC_
 #define _MICROMEMFILE_H_INC_
 
+#include <cstdint>
 
 
 // file functions
-EXTERN_C BYTE* fileLoad(CTSTR tszFileName, DWORD* pdwFileSize);
-EXTERN_C void fileUnload(BYTE* pbyFile);
-EXTERN_C BOOL fileStore(void* pbyFile, CTSTR tszFileName, DWORD dwFileSize);
+void* fileLoad(const WString& fileName, std::uint32_t* pFileSize);
+void fileUnload(void* pFileData);
+bool fileStore(void* pFileData, const WString& fileName, std::uint32_t fileSize);
 
 
 

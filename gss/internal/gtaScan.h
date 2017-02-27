@@ -10,7 +10,7 @@
 //   29.11.2016 22:25 - created
 //
 
-#include "uDef.h"
+#include <ulib/uDef.h>
 
 #include "gssInterface.h"
 

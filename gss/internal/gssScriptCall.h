@@ -72,11 +72,12 @@ enum GTA3MARKERTYPE {
 
 
 
-#include "idecl.h"
+#include <ulib/idecl.h>
 class IScriptThread {
 public:
-    IENTRY void ICALL setOffsetIP(DWORD offset) IPURE;
+    IENTRY void ICALL init(void) IPURE;
     IENTRY BOOL ICALLVA invoke(DWORD commandIndex, ...) IPURE;
+    IENTRY void ICALL setOffsetIP(DWORD offset) IPURE;
 };
 
 extern IScriptThread* g_pIScript;

@@ -16,7 +16,7 @@
 
 #include <math.h>       // pow, floor, sqrt, sinf, cosf
 
-#include "uDef.h"
+#include <ulib/uDef.h>
 
 #include "gssDef.h"
 

@@ -15,7 +15,7 @@
 void parkSysStateMachine(AStringStream& display, GtaPlayerState& playerState);
 void parkSysInit(DWORD gtaVersion);
 BOOL parkSysGetActiveParking(DWORD* piParkActive);
-PARKLOTHDR* parkSysGetParkHdr(DWORD iPark, FloatVector4** ppfvPosSlots);
+//PARKLOTHDR* parkSysGetParkHdr(DWORD iPark, FloatVector4** ppfvPosSlots);
 
 
 

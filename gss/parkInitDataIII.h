@@ -13,6 +13,7 @@
 //   12.07.2016 05:40 - renamed some stuff
 //   13.11.2016 07:07 - removed tailing commas for compability with msvs11
 //   24.11.2016 11:36 - replaced all PARKID macros with park id (name) only
+//   27.12.2016 03:58 - replaced 1-place ROWs with POINTs
 //
 
 
@@ -46,10 +47,14 @@ PARK(
         1420.0, -600.0, -1.0,  1670.0, -310.0, 52.0,
         1410.0, -610.0, -2.0,  1680.0, -300.0, 57.0
     ),
-    ROW(
-        D0, IPD_VT_WATER_III, 1,
-        FV4( 1524.625, -467.75, -0.5, 15.0 ),
-        FV4( 0.0, 0.0, +8.0, 0.0 )
+    //ROW(
+    //    D0, IPD_VT_WATER_III, 1,
+    //    FV4( 1524.625, -467.75, -0.5, 15.0 ),
+    //    FV4( 0.0, 0.0, +8.0, 0.0 )
+    //),
+    POINT(
+        D0, IPD_VT_WATER_III,
+        FV4( 1524.625, -467.75, -0.5, 15.0 )
     ),
     NONE,
     NONE,
@@ -286,10 +291,9 @@ PARK(
         FV4( -1198.0, 316.0, 2.375, 270.0 ),
         FV4( 0.0, +5.0, 0.0, 0.0 )
     ),
-    ROW(
-        D0, IPD_VT_WATER_III, 1,
-        FV4( -1109.0, 279.0, -0.5, 270.0 ),
-        FV4( 0.0, 0.0, +8.0, 0.0 )
+    POINT(
+        D0, IPD_VT_WATER_III,
+        FV4( -1109.0, 279.0, -0.5, 270.0 )
     ),
     NONE,
     NONE

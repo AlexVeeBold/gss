@@ -9,12 +9,13 @@
 //
 //   30.11.2014 07:18 - created (moved from gssMain)
 //   10.07.2016 18:34 - moved Vehicle stuff to gtaVehicle.h
+//   27.12.2016 03:49 - cleaned up
 //
 
 #pragma once
 
 
-#include "uString.h"
+#include <ulib/uString.h>
 
 
 enum PARKSIGN {
@@ -35,13 +36,6 @@ struct PARKSYSHDR {
 };
 
 enum PARKSYSDEFS {
-    // lane type
-    PSD_LANE_ROW = 0x80,    // num_pos_slots = 2                // start_pos, inc_pos
-    PSD_LANE_POINTS = 0x40, // num_pos_slots = num_spaces       // pos, pos, pos, ...
-    // lane type masks
-    PSD_LANE_TYPE_MASK = 0xE0,
-    PSD_LANE_NUMSPACES_MASK = 0x1F,   // max: 31 space in lane
-    // 
     PSD_NAME_SIZE = 8,
     PSD_MAX_LANE_SPACES = 16,   // should be less than number set by PSD_LANE_NUMSPACES_MASK
     PSD_MAX_PARKING_LANES = 8,
@@ -53,19 +47,26 @@ enum PARKSYSDEFS {
 };
 
 
-struct PARKLANEINFO {
+#define LANE_PACK_ANGLE(a)          (BYTE)( a / 360.0f * 256.0f )
+#define LANE_UNPACK_ANGLE(a)        ( ((FLOAT)a) / 256.0f * 360.0f )
+
+struct PARKLANE {
+    BYTE numSpaces;
     BYTE vehTypes;
-    BYTE laneType;
+    BYTE z02;
+    BYTE spawnAngle;
+    FloatVector3 fvStart;
+    DWORD z10;
+    FloatVector3 fvInc;
 };
 
 struct PARKLOTHDR {
     DWORD sign;
     BYTE name[PSD_NAME_SIZE];
-    BYTE numLanes;  // number of PARKLANEINFO values (max. = PKL_MAX_LANEINFO)
-    BYTE numPosSlots;   // number of FloatVector4 structures
-    BYTE numVehicles;   // number of VEHINFO structures
-    BYTE z07;
-    PARKLANEINFO laneInfo[PSD_MAX_PARKING_LANES];
+    BYTE numLanes;      // number of PARKLANE structures
+    BYTE z0D;
+    BYTE numSpaces;     // number of VEHINFO structures
+    BYTE z0F;
     FloatZOBBox3 bbEnter;   // inner
     FloatZOBBox3 bbLeave;   // outer
 };
@@ -74,7 +75,7 @@ struct PARKLOTHDR {
     PARKSYSHDR syshdr
     (numParks){
         PARKLOTHDR lothdr
-        FloatVector4[n] pos     // n = sum ( numSpaces for each 'point' lane , 2 for each 'row' lane )
+        PARKLANE[n] pos         // n = numLanes
         VEHSPEC[m] vehSpec      // m = sum ( numSpaces for each lane )
     }
 */

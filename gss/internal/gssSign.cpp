@@ -14,11 +14,10 @@
 //
 
 
-#include "uDef.h"
-#include "tunic.h"
-#include "tstr.h"
-#include "uLog.h"
-#include "uMemory.h"
+#include <ulib/uDef.h>
+#include <ulib/tunic.h>
+#include <ulib/uLog.h>
+#include <ulib/uMemory.h>
 
 #include "gssSign.h"
 

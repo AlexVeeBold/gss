@@ -11,13 +11,12 @@
 //
 
 
-#include "uDef.h"
-#include "tunic.h"
-#include "tstr.h"
-#include "uLog.h"
+#include <ulib/uDef.h>
+#include <ulib/tunic.h>
+#include <ulib/uLog.h>
 
 #include "gssDef.h"
-#include "gssScriptCall.h"
+#include <internal/gssScriptCall.h>
 
 #include "parkDef.h"
 

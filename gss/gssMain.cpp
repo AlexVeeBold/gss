@@ -71,7 +71,7 @@
 //   04.01.2015 11:36 - added correct z-oriented bounding box test
 //   10.07.2016 18:30 - cleaning things up (it's been a while, huh?)
 //   11.11.2016 18:56 - adding IV back (a-little)
-//   13.11.2016 04:33 - moved project from VS6 to VS11 (coz of whole bunch of useful features)
+//   13.11.2016 04:33 - moved project from VS6 to VS11 (features matters)
 //
 
 
@@ -79,26 +79,25 @@
 #include <windows.h>
 #include <psapi.h>
 
-#include "tunic.h"
-#include "tstr.h"
-#include "uDef.h"
-#include "uLog.h"
-#include "uFile.h"
-#include "uMemory.h"
-#include "uRandom.h"
+#include <ulib/uDef.h>
+#include <ulib/tunic.h>
+#include <ulib/uLog.h>
+#include <ulib/uMemory.h>
+#include <ulib/uRandom.h>
 
 
 #include "gss.h"
 
 #include "gssDef.h"
 
-#include "gssInterface.h"
-#include "gssScriptCall.h"
+#include <internal/gssInterface.h>
+#include <internal/gssScriptCall.h>
 
-#include "gtaVersion.h"
-#include "gtaScan.h"
+#include <internal/gtaVersion.h>
+#include <internal/gtaScan.h>
 
 #include "parkSys.h"
+#include "parkZone.h"
 
 
 
@@ -113,8 +112,11 @@ void gssReset(void)
 void gssProcess(void)
 {
     AStringStream ss("");
+    AStringStream sspx("");
     ss.precision(3);
     ss.setf(std::ios::fixed);
+    sspx.precision(3);
+    sspx.setf(std::ios::fixed);
     DWORD playerIndex;
 
     GtaPlayerState playerState;
@@ -135,7 +137,7 @@ void gssProcess(void)
 
             void* pCVehicle;
             pCVehicle = GtaGetCVehiclePtr(playerState.vehiclePlayer);
-            ss << " CVeh:" << std::hex << (DWORD)(pCVehicle) << std::dec;
+            ss << ":" << std::hex << (DWORD)(pCVehicle) << std::dec;
             ss << " m:" << std::hex << std::setfill('0') << std::setw(4) << *(WORD*)((BYTE*)pCVehicle + 0x5C) << std::dec;
 
             //INT type = -1;
@@ -148,23 +150,6 @@ void gssProcess(void)
             //    type = *(INT*)((BYTE*)pCVehicle + 0x29C);
             //}
             //ss << " T:" << type;
-
-            //DWORD gear = 0;
-            //if(gssGtaVer == GTA_III)
-            //{
-            //    gear = *(BYTE*)((BYTE*)pCVehicle + 0x204);
-            //}
-            //if(gssGtaVer == GTA_VC)
-            //{
-            //    gear = *(BYTE*)((BYTE*)pCVehicle + 0x208);
-            //}
-            //ss << " G:" << gear;
-
-            //FLOAT speed;
-            //FLOAT pedal;
-            //speed = *(FLOAT*)((BYTE*)pCVehicle + 0x514);
-            //pedal = *(FLOAT*)((BYTE*)pCVehicle + 0x594);
-            //ss << "(" << speed << ")(" << pedal << ")";
   //          FLOAT rotX;
   //          FLOAT rotY;
   //          FLOAT rotZ;
@@ -180,35 +165,29 @@ void gssProcess(void)
             //ss << ", h(" << playerState.fHeadingVehicle << ")";
         }
 
-        ss << ";";
+        FloatVector3 fvSpherePos;
+        if(playerState.bIsInCar)
+        {
+            fvSpherePos = playerState.fvPosVehicle;
+        }
+        else
+        {
+            fvSpherePos = playerState.fvPosChar;
+        }
+        FLOAT groundZ;
+        SN::WORLD::GET_GROUND_Z_FOR_3D_COORD(fvSpherePos, &groundZ);
+        FLOAT originHeight = fvSpherePos.Z - groundZ;
+        ss << "; z:" << originHeight << ", " << groundZ;
 
-        parkSysStateMachine(ss, playerState);
+        parkSysStateMachine(sspx, playerState);
         //zoneStateMachine(ss, playerState);
+        parkEditorStateMachine(sspx, playerState);
+        sspx << "; ";
     }
-
-    FloatVector3 fvSpherePos;
-  //  ByteVector3 rgbSphereColor;
-    if(playerState.bIsInCar)
-    {
-        fvSpherePos = playerState.fvPosVehicle;
-  //      rgbSphereColor.dw = 0x00FF00;
-    }
-    else
-    {
-        fvSpherePos = playerState.fvPosChar;
-  //      rgbSphereColor.dw = 0x0000FF;
-    }
-  //  SN::MARKER::DRAW_CORONA(37, fvSpherePos, 1.0f, 5, false, rgbSphereColor);
-    FLOAT groundZ;
-    SN::WORLD::GET_GROUND_Z_FOR_3D_COORD(fvSpherePos, &groundZ);
-    FLOAT originHeight = fvSpherePos.Z - groundZ;
-  //  fvSpherePos.Z = groundZ;
-  //  rgbSphereColor.dw = 0xFF0000;
-  //  SN::MARKER::DRAW_CORONA(38, fvSpherePos, 1.0f, 5, false, rgbSphereColor);
-    ss << "; z:" << originHeight << ", " << groundZ;
 
     //
-    GtaDrawString(ss.str(), gtaFont);
+    sspx << ss.str();
+    GtaDrawString(sspx.str(), gtaFont);
 }
 
 

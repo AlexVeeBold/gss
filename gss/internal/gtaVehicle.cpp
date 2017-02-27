@@ -11,15 +11,14 @@
 //   27.11.2016 11:49 - fixed recently added VC CVehicle layout
 //   03.12.2016 22:54 - renamed VehicleG3 to VehicleIII
 //   04.12.2016 01:44 - recreated GenerateFreeVehicleSpec
+//   12.12.2016 23:13 - now using new packed-rotation routines
 //
 
-#define _USE_MATH_DEFINES
-#include <cmath>
 
-#include "uDef.h"
-#include "tunic.h"
-#include "uLog.h"
-#include "uRandom.h"
+#include <ulib/uDef.h>
+#include <ulib/tunic.h>
+#include <ulib/uLog.h>
+#include <ulib/uRandom.h>
 
 #include "gssDef.h"
 #include "gssInterface.h"
@@ -32,6 +31,8 @@
 #include "parkDef.h"
 
 #include "gtaVehicle.h"
+
+#include "gtaMisc.h"
 
 
 
@@ -190,14 +191,14 @@ struct GCAutomobileIII {
 
 
 
-
 void VehicleLoadMatrix(GtaMatrix4& mat, const GVeh30& vehInfo)
 {
-    FLOAT scaleFactor = 100.0f;
+//    FLOAT scaleFactor = 100.0f;
     FloatVector3 rotation;
-    rotation.X = static_cast<FLOAT>(vehInfo.rotation.X) / scaleFactor;
-    rotation.Y = static_cast<FLOAT>(vehInfo.rotation.Y) / scaleFactor;
-    rotation.Z = static_cast<FLOAT>(vehInfo.rotation.Z) / scaleFactor;
+//    rotation.X = static_cast<FLOAT>(vehInfo.rotation.X) / scaleFactor;
+//    rotation.Y = static_cast<FLOAT>(vehInfo.rotation.Y) / scaleFactor;
+//    rotation.Z = static_cast<FLOAT>(vehInfo.rotation.Z) / scaleFactor;
+    GtaUnpackRotation(rotation, vehInfo.rotation);
     mat.m11 = rotation.Y;
     mat.m12 = -rotation.X;
     mat.m13 = 0.0f;
@@ -214,17 +215,22 @@ void VehicleLoadMatrix(GtaMatrix4& mat, const GVeh30& vehInfo)
 
 void VehicleStoreMatrix(GVeh30& vehInfo, const GtaMatrix4& mat)
 {
-    FLOAT scaleFactor = 100.0f;
+//    FLOAT scaleFactor = 100.0f;
+    FloatVector3 rotation;
     vehInfo.position.X = mat.m41;
     vehInfo.position.Y = mat.m42;
     vehInfo.position.Z = mat.m43;
-    vehInfo.rotation.X = static_cast<SBYTE>(mat.m21 * scaleFactor);
-    vehInfo.rotation.Y = static_cast<SBYTE>(mat.m22 * scaleFactor);
-    vehInfo.rotation.Z = static_cast<SBYTE>(mat.m23 * scaleFactor);
+//    vehInfo.rotation.X = static_cast<SBYTE>(mat.m21 * scaleFactor);
+//    vehInfo.rotation.Y = static_cast<SBYTE>(mat.m22 * scaleFactor);
+//    vehInfo.rotation.Z = static_cast<SBYTE>(mat.m23 * scaleFactor);
+    rotation.X = mat.m21;
+    rotation.Y = mat.m22;
+    rotation.Z = mat.m23;
+    GtaPackRotation(vehInfo.rotation, rotation);
 }
 
 
-#include "iimpl.h"
+#include <ulib/iimpl.h>
 class VehicleIII : public IVehicle {
 private:
     // no data members
@@ -235,10 +241,11 @@ public:
     IENTRY Vehicle ICALL spawn(VehSpec vehSpec) IPURE;
     IENTRY DWORD ICALL getModel(Vehicle vehicle) IPURE;
     IENTRY void ICALL doAlarmShort(Vehicle vehicle) IPURE;   // if possible for this vehicle type
+    IENTRY void ICALL stopEngine(Vehicle vehicle) IPURE;
     IENTRY void ICALL release(Vehicle* pVehicle) IPURE;
 };
 
-#include "iimpl.h"
+#include <ulib/iimpl.h>
 class VehicleVC : public VehicleIII {
 private:
     // no data members
@@ -249,6 +256,7 @@ public:
     IENTRY Vehicle ICALL spawn(VehSpec vehSpec) IPURE;
     //IENTRY DWORD ICALL getModel(Vehicle vehicle) IPURE;
     IENTRY void ICALL doAlarmShort(Vehicle vehicle) IPURE;   // if possible for this vehicle type
+    IENTRY void ICALL stopEngine(Vehicle vehicle) IPURE;
     //IENTRY void ICALL release(Vehicle* pVehicle) IPURE;
 };
 
@@ -637,17 +645,30 @@ DWORD VehicleIII::getModel(Vehicle vehicle)
 void VehicleIII::doAlarmShort(Vehicle vehicle)
 {
     // make some noise
-    GCVehicleIII* pCVehicle = static_cast<GCVehicleIII*>(static_cast<void*>(GtaGetCVehiclePtr(vehicle)));
+    GCVehicleIII* pCVehicle = static_cast<GCVehicleIII*>(GtaGetCVehiclePtr(vehicle));
     pCVehicle->alarmDuration = 1005 / 2;
 }
 
 void VehicleVC::doAlarmShort(Vehicle vehicle)
 {
     // make some noise
-    GCVehicleVC* pCVehicle = static_cast<GCVehicleVC*>(static_cast<void*>(GtaGetCVehiclePtr(vehicle)));
+    GCVehicleVC* pCVehicle = static_cast<GCVehicleVC*>(GtaGetCVehiclePtr(vehicle));
     pCVehicle->alarmDuration = 1005 / 2;
 }
 
+
+
+void VehicleIII::stopEngine(Vehicle vehicle)
+{
+    GCVehicleIII* pCVehicle = static_cast<GCVehicleIII*>(GtaGetCVehiclePtr(vehicle));
+    pCVehicle->equipmentFlags &= ~III_01F5_ENGINE_IS_ON;     // turn off engine
+}
+
+void VehicleVC::stopEngine(Vehicle vehicle)
+{
+    GCVehicleVC* pCVehicle = static_cast<GCVehicleVC*>(GtaGetCVehiclePtr(vehicle));
+    pCVehicle->equipmentFlags &= ~VC_01F9_ENGINE_IS_ON;     // turn off engine
+}
 
 
 
@@ -742,7 +763,8 @@ FreeVeh30 stingerPurple = {
     0x00, 0x0A,     // no proofs, radio off
 };
 
-DWORD GenerateFreeVehicleSpec(VehSpec vehSpec, const FloatAngledVector3& pos)
+//DWORD GenerateFreeVehicleSpec(VehSpec vehSpec, const FloatAngledVector3& pos)
+DWORD GenerateFreeVehicleSpec(VehSpec vehSpec, const FloatVector3& position, const SByteVector3& rotation)
 {
     FreeVeh30* pFreeVeh = nullptr;
     DWORD model = 0;
@@ -772,24 +794,34 @@ DWORD GenerateFreeVehicleSpec(VehSpec vehSpec, const FloatAngledVector3& pos)
 
     if(pFreeVeh != nullptr)
     {
-        FLOAT angleRad = static_cast<FLOAT>(pos.angle / 180.0f * M_PI);
-        GtaMatrix4 mat;
-        mat.m41 = pos.pos.X;
-        mat.m42 = pos.pos.Y;
-        mat.m43 = pos.pos.Z + pFreeVeh->modelCenterHeight;
-        // rot x = { 0°:  0.0, 90°: -1.0, 180°:  0.0, 270°: +1.0 } = -sin()
-        // rot y = { 0°: +1.0, 90°:  0.0, 180°: -1.0, 270°:  0.0 } =  cos()
-        // rot z = 0.0
-        mat.m21 = -sinf(angleRad);
-        mat.m22 = cosf(angleRad);
-        mat.m23 = 0.0f;
+  //      FLOAT angleRad = static_cast<FLOAT>(pos.angle / 180.0f * M_PI);
+  //      GtaMatrix4 mat;
+  //      mat.m41 = pos.pos.X;
+  //      mat.m42 = pos.pos.Y;
+  //      mat.m43 = pos.pos.Z + pFreeVeh->modelCenterHeight;
+  //      // rot x = { 0°:  0.0, 90°: -1.0, 180°:  0.0, 270°: +1.0 } = -sin()
+  //      // rot y = { 0°: +1.0, 90°:  0.0, 180°: -1.0, 270°:  0.0 } =  cos()
+  //      // rot z = 0.0
+  //      mat.m21 = -sinf(angleRad);
+  //      mat.m22 = cosf(angleRad);
+  //      mat.m23 = 0.0f;
+  //      mat.m21 = rotation.X;
+  //      mat.m22 = rotation.Y;
+  //      mat.m23 = rotation.Z;
 //        lss << UL::DEBUG << L("genVeh: p:(") << pos.pos.X << L(", ") << pos.pos.Y << L(", ") << pos.pos.Z << L(")");
 //        lss << L("  a:") << pos.angle << L(" aRad:") << angleRad;
 //        lss << L("  r:(") << mat.m21 << L(", ") << mat.m22 << L(", ") << mat.m23 << L(")") << UL::ENDL;
 
+ //       SByteVector3 packedRotation;
+ //       GtaMakePackedRotation(packedRotation, pos.angle);
         GVeh30* pVeh30 = static_cast<GVeh30*>(vehSpec);
         pVeh30->model = pFreeVeh->model;
-        VehicleStoreMatrix(*pVeh30, mat);
+   //     VehicleStoreMatrix(*pVeh30, mat);
+ //       pVeh30->position = pos.pos;
+        pVeh30->position = position;
+        pVeh30->position.Z += pFreeVeh->modelCenterHeight;
+ //       pVeh30->rotation = packedRotation;
+        pVeh30->rotation = rotation;
         pVeh30->proofs = pFreeVeh->proofs;
         pVeh30->creationTime = GtaGetGameTime();
         pVeh30->color1 = pFreeVeh->color1;

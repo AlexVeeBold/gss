@@ -29,19 +29,21 @@
 //   04.01.2015 10:56 - rewritten veh. spawn test & moved it into zonedef (also added multi-lane support)
 //   13.07.2016 02:43 - rewritten button-zone interaction, adding divide, multiply & decimal buttons (num-pad)
 //   14.07.2016 03:52 - fixed wrong z.o.b.b. offsets calculation
+//   05.12.2016 21:14 - moved keys/buttons/switches into classes, written base skeleton for park-editor class
 //
 
 
 #define WIN32_LEAN_AND_MEAN     // Exclude rarely-used stuff from Windows headers
 #include <windows.h>
 
-#include "uDef.h"
-#include "tunic.h"
-#include "tstr.h"
-#include "uLog.h"
+#include <algorithm>    // std::swap
+
+#include <ulib/uDef.h>
+#include <ulib/tunic.h>
+#include <ulib/uLog.h>
 
 #include "gssDef.h"
-#include "gssScriptCall.h"
+#include <internal/gssScriptCall.h>
 
 #include "mathUtil.h"
 
@@ -49,11 +51,415 @@
 
 #include "parkSys.h"
 
-#include "gtaMisc.h"
-#include "gtaVehicle.h"
+#include <internal/gtaMisc.h>
+#include <internal/gtaVehicle.h>
+
+
+#pragma warning(disable:4351)       // warning C4351: new behavior: elements of array will be default initialized
+
+
+//////// //////// //////// //////// buttons //////// //////// //////// ////////
+
+enum NPBUTTONS {
+    NPB_WEST,    // num4 left    left
+    NPB_EAST,    // num6 right   right
+    NPB_NORTH,   // num8 up      up
+    NPB_SOUTH,   // num2 down    down
+    NPB_TOP,     // num7 home
+    NPB_BOTTOM,  // num1 end
+    NPB_PREV,    // num9 pgup
+    NPB_NEXT,    // num3 pgdn
+    NPB_ENTER,   // num5 clear
+    NPB_LEAVE,   // num0 ins
+    NPB_DEC,     // num-
+    NPB_INC,     // num+
+    NPB_DIVIDE,      // num/
+    NPB_MULTIPLY,    // num*
+    NPB_DECIMAL,     // num.
+    //
+    NUM_NPBUTTONS,
+};
+
+class NumPadButtons {
+private:
+    BYTE m_keys[2][256];
+    DWORD m_iKeysCurrent;   // 0 or 1
+    DWORD m_iKeysPrevious;  // 1 or 0
+    inline BOOL isKeyPressedNow(DWORD vkey);
+    inline BOOL wasKeyPressedBefore(DWORD vkey);
+    inline BOOL isKeyPressed(DWORD vkey, BOOL pressedJustNow);
+public:
+    NumPadButtons()
+        : m_iKeysCurrent(0), m_iKeysPrevious(1), m_keys(), button()
+    {
+    }
+
+    void update(void);
+    BOOL button[NUM_NPBUTTONS];
+};
+
+BOOL NumPadButtons::isKeyPressedNow(DWORD vkey)
+{
+    return ((m_keys[m_iKeysCurrent][vkey] & 0x80) != 0);
+}
+
+BOOL NumPadButtons::wasKeyPressedBefore(DWORD vkey)
+{
+    return ((m_keys[m_iKeysPrevious][vkey] & 0x80) != 0);
+}
+
+BOOL NumPadButtons::isKeyPressed(DWORD vkey, BOOL pressedJustNow)
+{
+    BOOL bIsPressed;
+    bIsPressed = this->isKeyPressedNow(vkey);   // is down
+    if(pressedJustNow)
+    {
+        // and is just pressed
+        bIsPressed &= (this->wasKeyPressedBefore(vkey) == FALSE);
+    }
+    return bIsPressed;
+}
+
+void NumPadButtons::update(void)
+{
+    BOOL bUseArrows = FALSE;
+    BOOL bSuccess;
+    BOOL bOneStepMove = TRUE;   // one key press = one move step
+    BOOL bOneStepSwitch = TRUE; // one key press = one mode change
+    std::swap(m_iKeysCurrent, m_iKeysPrevious);
+    bSuccess = ::GetKeyboardState(m_keys[m_iKeysCurrent]);
+    if(bSuccess != FALSE)
+    {
+        button[NPB_WEST] = this->isKeyPressed(VK_NUMPAD4, bOneStepMove);
+        button[NPB_EAST] = this->isKeyPressed(VK_NUMPAD6, bOneStepMove);
+        button[NPB_NORTH] = this->isKeyPressed(VK_NUMPAD8, bOneStepMove);
+        button[NPB_SOUTH] = this->isKeyPressed(VK_NUMPAD2, bOneStepMove);
+        if(bUseArrows != FALSE)
+        {
+            button[NPB_WEST] |= this->isKeyPressed(VK_LEFT, bOneStepMove);
+            button[NPB_EAST] |= this->isKeyPressed(VK_RIGHT, bOneStepMove);
+            button[NPB_NORTH] |= this->isKeyPressed(VK_UP, bOneStepMove);
+            button[NPB_SOUTH] |= this->isKeyPressed(VK_DOWN, bOneStepMove);
+        }
+        button[NPB_TOP] = this->isKeyPressed(VK_NUMPAD7, bOneStepMove);
+        button[NPB_BOTTOM] = this->isKeyPressed(VK_NUMPAD1, bOneStepMove);
+        button[NPB_PREV] = this->isKeyPressed(VK_NUMPAD9, bOneStepSwitch);
+        button[NPB_NEXT] = this->isKeyPressed(VK_NUMPAD3, bOneStepSwitch);
+        button[NPB_ENTER] = this->isKeyPressed(VK_NUMPAD5, bOneStepSwitch);
+        button[NPB_LEAVE] = this->isKeyPressed(VK_NUMPAD0, bOneStepSwitch);
+        button[NPB_DEC] = this->isKeyPressed(VK_SUBTRACT, bOneStepSwitch);
+        button[NPB_INC] = this->isKeyPressed(VK_ADD, bOneStepSwitch);
+        button[NPB_DIVIDE] = this->isKeyPressed(VK_DIVIDE, bOneStepSwitch);
+        button[NPB_MULTIPLY] = this->isKeyPressed(VK_MULTIPLY, bOneStepSwitch);
+        button[NPB_DECIMAL] = this->isKeyPressed(VK_DECIMAL, bOneStepSwitch);
+    }
+}
+
+
+class ButtonSwitchBoolean {
+private:
+    DWORD m_keySwitch;
+    DWORD* m_pVariable;
+    NumPadButtons* m_pNPButtons;
+
+public:
+    ButtonSwitchBoolean(NumPadButtons* pNPButtons, DWORD* pVar, DWORD keySwitch)
+    {
+        m_keySwitch = keySwitch;
+        m_pNPButtons = pNPButtons;
+        m_pVariable = pVar;
+    }
+
+    void update(void)
+    {
+        if(m_pNPButtons->button[m_keySwitch])
+        {
+            *m_pVariable = !*m_pVariable;
+        }
+    }
+};
+
+
+class ButtonSwitch2Values {
+private:
+    DWORD m_keySwitch;
+    DWORD m_first;
+    DWORD m_second;
+    DWORD* m_pVariable;
+    NumPadButtons* m_pNPButtons;
+
+public:
+    ButtonSwitch2Values(NumPadButtons* pNPButtons, DWORD* pVar, 
+        DWORD keySwitch, DWORD modeFirst, DWORD modeSecond)
+    {
+        m_keySwitch = keySwitch;
+        m_first = modeFirst;
+        m_second = modeSecond;
+        m_pNPButtons = pNPButtons;
+        m_pVariable = pVar;
+    }
+
+    void update(void)
+    {
+        if(m_pNPButtons->button[m_keySwitch])
+        {
+            DWORD value = *m_pVariable;
+            if(value == m_first)
+            {
+                value = m_second;
+            }
+            else
+            {
+                value = m_first;
+            }
+            *m_pVariable = value;
+        }
+    }
+};
+
+
+class ButtonSwitchLooped {
+private:
+    DWORD m_keyBack;
+    DWORD m_loopBackFrom;
+    DWORD m_loopBackTo;
+    DWORD m_keyForward;
+    DWORD m_loopForwardFrom;
+    DWORD m_loopForwardTo;
+    DWORD* m_pVariable;
+    NumPadButtons* m_pNPButtons;
+
+public:
+    ButtonSwitchLooped(NumPadButtons* pNPButtons, DWORD* pVar, 
+        DWORD keyBack, DWORD modeLoopBackFrom, DWORD modeLoopBackTo, 
+        DWORD keyFwd, DWORD modeLoopFwdFrom, DWORD modeLoopFwdTo)
+    {
+        m_keyBack = keyBack;
+        m_loopBackFrom = modeLoopBackFrom;
+        m_loopBackTo = modeLoopBackTo;
+        m_keyForward = keyFwd;
+        m_loopForwardFrom = modeLoopFwdFrom;
+        m_loopForwardTo = modeLoopFwdTo;
+        m_pNPButtons = pNPButtons;
+        m_pVariable = pVar;
+    }
+
+    void update(void)
+    {
+        DWORD value = *m_pVariable;
+        if(m_pNPButtons->button[m_keyBack])
+        {
+            value--;
+            if(value == m_loopBackFrom)
+            {
+                value = m_loopBackTo;
+            }
+        }
+        if(m_pNPButtons->button[m_keyForward])
+        {
+            value++;
+            if(value == m_loopForwardFrom)
+            {
+                value = m_loopForwardTo;
+            }
+        }
+        *m_pVariable = value;
+    }
+};
+
+
+class ButtonSwitchNumber {
+private:
+    DWORD m_keySubtractOne;
+    DWORD m_keyAddOne;
+    INT m_valueMin;
+    INT m_valueMax;
+    INT* m_pVariable;
+    NumPadButtons* m_pNPButtons;
+
+public:
+    ButtonSwitchNumber(NumPadButtons* pNPButtons, INT* pVar, 
+        DWORD keySubtract, DWORD keyAdd, INT minValue, INT maxValue)
+    {
+        m_keySubtractOne = keySubtract;
+        m_keyAddOne = keyAdd;
+        m_valueMin = minValue;
+        m_valueMax = maxValue;
+        m_pNPButtons = pNPButtons;
+        m_pVariable = pVar;
+    }
+
+    void update(void)
+    {
+        INT value = *m_pVariable;
+        if(m_pNPButtons->button[m_keySubtractOne])
+        {
+            value--;
+            if(value < m_valueMin)
+            {
+                value = m_valueMax;
+            }
+        }
+        if(m_pNPButtons->button[m_keyAddOne])
+        {
+            value++;
+            if(value > m_valueMax)
+            {
+                value = m_valueMin;
+            }
+        }
+        *m_pVariable = value;
+    }
+};
 
 
 
+
+//////// //////// //////// //////// park zone //////// //////// //////// ////////
+
+
+enum PARKEDITOR_MODE {
+    PEM__LOOP_BACK,
+    PEM_SETCENTER,
+    PEM_SETQUADS,
+    PEM_SETLANES,
+    PEM_TESTPOS,
+    PEM__LOOP_FWD,
+    PEM__LOOP_BACK_TO = PEM_TESTPOS,
+    PEM__LOOP_FWD_TO = PEM_SETCENTER,
+};
+
+enum PARKEDITOR_QUAD {
+    PEQ_INNER,
+    PEQ_OUTER,
+};
+enum PARKEDITOR_QUADCORNER {
+    PEC__LOOP_BACK,
+    PEC_A,
+    PEC_B,
+    PEC_HEIGHT,
+    PEC__LOOP_FWD,
+    PEC__LOOP_BACK_TO = PEC_HEIGHT,
+    PEC__LOOP_FWD_TO = PEC_A,
+};
+
+
+class SSPCX {    // Parking Editor/Creator
+private:
+    DWORD m_mode;
+    BOOL m_bMoveLock;
+    BOOL m_bMoving;
+    DWORD m_quad;
+    DWORD m_corner;
+    INT m_laneIndex;
+    NumPadButtons m_NPButtons;
+    ButtonSwitchLooped m_SwitchMode;
+    ButtonSwitchBoolean m_SwitchMoveLock;
+    ButtonSwitchBoolean m_SwitchMoving;
+    ButtonSwitch2Values m_SwitchQuad;
+    ButtonSwitchLooped m_SwitchCorner;
+    ButtonSwitchNumber m_SwitchLane;
+public:
+    SSPCX() :
+        m_mode(PEM_SETCENTER),
+        m_bMoveLock(FALSE),
+        m_bMoving(FALSE),
+        m_quad(PEQ_INNER),
+        m_corner(PEC_A),
+        m_laneIndex(0),
+        m_SwitchMode(&m_NPButtons, &m_mode, NPB_PREV, PEM__LOOP_BACK, PEM__LOOP_BACK_TO, NPB_NEXT, PEM__LOOP_FWD, PEM__LOOP_FWD_TO),
+        m_SwitchMoveLock(&m_NPButtons, &m_bMoveLock, NPB_DIVIDE),
+        m_SwitchMoving(&m_NPButtons, &m_bMoving, NPB_ENTER),
+        m_SwitchQuad(&m_NPButtons, &m_quad, NPB_LEAVE, PEQ_INNER, PEQ_OUTER),
+        m_SwitchCorner(&m_NPButtons, &m_corner, NPB_NORTH, PEC__LOOP_BACK, PEC__LOOP_BACK_TO, NPB_SOUTH, PEC__LOOP_FWD, PEC__LOOP_FWD_TO),
+        m_SwitchLane(&m_NPButtons, &m_laneIndex, NPB_DEC, NPB_INC, 0, PSD_MAX_PARKING_LANES - 1)
+    {
+    }
+    void FSM(AStringStream& display, GtaPlayerState& playerState);
+};
+//BTNSW_BOOLEAN bswZoneMoveLock = {BT_DIVIDE};
+//BTNSW_BOOLEAN bswZoneMoving = {BT_ENTER};
+//BTNSW_2VALUES bswZoneQuads = {BT_LEAVE, ZB_OUTER, ZB_INNER};
+//BTNSW_2VALUES bswZoneLanePoints = {BT_LEAVE, ZL_START, ZL_END};
+//BTNSW_LOOPED bswZoneMode = {BT_PREV, ZM__LOOP_BACK, ZM__LOOP_BACK_TO, BT_NEXT, ZM__LOOP_FWD, ZM__LOOP_FWD_TO};
+//BTNSW_LOOPED bswZoneCorner = {BT_NORTH, ZBC__LOOP_BACK, ZBC__LOOP_BACK_TO, BT_SOUTH, ZBC__LOOP_FWD, ZBC__LOOP_FWD_TO};
+//BTNSW_NUMBER bswZoneLaneIndex = {BT_NORTH, BT_SOUTH, ZONE_LANE_FIRST, ZONE_LANE_LAST};
+//BTNSW_NUMBER bswZoneNumVehicles = {BT_DEC, BT_INC, MIN_TEST_VEHICLES, MAX_TEST_VEHICLES};
+
+void SSPCX::FSM(AStringStream& display, GtaPlayerState& playerState)
+{
+    m_NPButtons.update();
+
+    m_SwitchMoveLock.update();
+    if(m_bMoveLock == FALSE)
+    {
+        m_SwitchMoving.update();
+    }
+    else
+    {
+        display << " (L)";
+    }
+    if(m_bMoving)
+    {
+        display << " (!!!)";
+    }
+
+    m_SwitchMode.update();
+    switch(m_mode)
+    {
+    case PEM_SETCENTER:
+        display << " Center";
+        break;
+    case PEM_SETQUADS:
+        display <<  " Quad";
+
+        m_SwitchQuad.update();
+        switch(m_quad)
+        {
+        case PEQ_INNER:
+            display << " Inner";
+            break;
+        case PEQ_OUTER:
+            display << " Outer";
+            break;
+        }
+
+        m_SwitchCorner.update();
+        switch(m_corner)
+        {
+        case PEC_A:
+            display << " A";
+            break;
+        case PEC_B:
+            display << " B";
+            break;
+        case PEC_HEIGHT:
+            display << " H";
+            break;
+        }
+        break;
+    case PEM_SETLANES:
+        m_SwitchLane.update();
+        display <<  " Lane " << m_laneIndex;
+        break;
+    case PEM_TESTPOS:
+        display <<  " Test";
+        break;
+    }
+
+}
+
+SSPCX sspcx;
+
+
+void parkEditorStateMachine(AStringStream& display, GtaPlayerState& playerState)
+{
+    sspcx.FSM(display, playerState);
+}
+
+
+
+/*
 //////// //////// //////// //////// buttons //////// //////// //////// ////////
 
 enum ZBUTTONS {
@@ -220,7 +626,6 @@ INT buttonsHandleNumberSwitch(INT value, BTNSW_NUMBER* pNS)
     }
     return value;
 }
-
 
 
 
@@ -1232,5 +1637,5 @@ void zoneStateMachine(AStringStream& display, GtaPlayerState& playerState)
         break;
     }
 }
-
+*/
 

@@ -10,16 +10,16 @@
 //   13.09.2014 03:56 - created (moved out from gssMain)
 //   18.11.2016 01:00 - cleaned up scriptCallData stuff
 //   03.12.2016 19:42 - moved stc3 into IScriptThread class tree
+//   27.02.2017 11:35 - replaced tstr functions with stdc ones
 //
 
 
 #include "memory.h"
 
 
-#include "uDef.h"
-#include "tunic.h"
-#include "tstr.h"
-#include "uLog.h"
+#include <ulib/uDef.h>
+#include <ulib/tunic.h>
+#include <ulib/uLog.h>
 
 
 #include "gssDef.h"
@@ -120,7 +120,7 @@ enum G30ScriptConst {
 struct GScriptThreadContextIII {
     GScriptThreadContextIII* pNext;
     GScriptThreadContextIII* pPrev;
-    BYTE szName[G30_SCRIPT_NAME_SIZE];
+    ACHAR szName[G30_SCRIPT_NAME_SIZE];
     DWORD scriptIP;
     DWORD scriptStack[G30_SCRIPT_STACK_SIZE];
     WORD scriptSP;
@@ -142,7 +142,7 @@ struct GScriptThreadContextIII {
 struct GScriptThreadContextVC {
     GScriptThreadContextVC* pNext;
     GScriptThreadContextVC* pPrev;
-    BYTE szName[G30_SCRIPT_NAME_SIZE];
+    ACHAR szName[G30_SCRIPT_NAME_SIZE];
     DWORD scriptIP;
     DWORD scriptStack[G30_SCRIPT_STACK_SIZE];
     WORD scriptSP;
@@ -167,7 +167,7 @@ union GScriptThreadContext {
 };
 
 
-#include "idecl.h"
+#include <ulib/idecl.h>
 
 // GTA III Script Model
 class IScriptThread30 : public IScriptThread {
@@ -189,7 +189,7 @@ public:
 
 
 
-#include "iimpl.h"
+#include <ulib/iimpl.h>
 
 class Script30 : public IScriptThread30 {
 protected:
@@ -207,13 +207,14 @@ protected:
     void cmdStart(SNCOMMAND* pcmd, DWORD* pArg);
     BOOL cmdFinish(void);
 public:
-    IENTRY void ICALL setOffsetIP(DWORD offset) IPURE;
     IENTRY BOOL ICALLVA invoke(DWORD commandIndex, ...) IPURE;
+    IENTRY void ICALL setOffsetIP(DWORD offset) IPURE;
 };
 
 
 class ScriptIII : public Script30 {
 public:
+    IENTRY void ICALL init(void) IPURE;
     IENTRY DWORD ICALL getLVar(DWORD index) IPURE;
     IENTRY void ICALL setLVar(DWORD index, DWORD value) IPURE;
     IENTRY BOOL ICALL getCmdResult(void) IPURE;
@@ -225,6 +226,7 @@ public:
 
 class ScriptVC : public ScriptIII {
 public:
+    IENTRY void ICALL init(void) IPURE;
     IENTRY DWORD ICALL getLVar(DWORD index) IPURE;
     IENTRY void ICALL setLVar(DWORD index, DWORD value) IPURE;
     IENTRY BOOL ICALL getCmdResult(void) IPURE;
@@ -255,6 +257,7 @@ void GtaScriptInit(DWORD GtaVersion)
         g_pIScript = &scVC;
         break;
     }
+    g_pIScript->init();
 }
 
 
@@ -414,6 +417,61 @@ BOOL Script30::invoke(DWORD commandIndex, ...)
     this->execute();
 
     return this->cmdFinish();
+}
+
+
+
+void ScriptIII::init(void)
+{
+    m_context.iii.pNext = nullptr;
+    m_context.iii.pPrev = nullptr;
+    strncpy_s(m_context.iii.szName, G30_SCRIPT_NAME_SIZE, "GSS", G30_SCRIPT_NAME_LEN);
+    m_context.iii.scriptIP = 0;
+    for(DWORD i = 0; i < G30_SCRIPT_STACK_SIZE; i++)
+    {
+        m_context.iii.scriptStack[i] = 0;
+    }
+    m_context.iii.scriptSP = 0;
+    for(DWORD i = 0; i < G30_SCRIPT_NUM_LVARS_TOTAL; i++)
+    {
+        m_context.iii.scriptLocalVar[i].dword = 0;
+    }
+    m_context.iii.condResult = FALSE;
+    m_context.iii.bIsMissionThread = FALSE;
+    m_context.iii.bWaitMessage = FALSE;
+    m_context.iii.wakeTime = 0;
+    m_context.iii.condOp = 0;
+    m_context.iii.condNotFlag = FALSE;
+    m_context.iii.bWastedBustedCheck = TRUE;
+    m_context.iii.bWastedBustedFlag = FALSE;
+    m_context.iii.bIsLoadedMissionThread = FALSE;
+}
+
+void ScriptVC::init(void)
+{
+    m_context.vc.pNext = nullptr;
+    m_context.vc.pPrev = nullptr;
+    strncpy_s(m_context.vc.szName, G30_SCRIPT_NAME_SIZE, "GSS", G30_SCRIPT_NAME_LEN);
+    m_context.vc.scriptIP = 0;
+    for(DWORD i = 0; i < G30_SCRIPT_STACK_SIZE; i++)
+    {
+        m_context.vc.scriptStack[i] = 0;
+    }
+    m_context.vc.scriptSP = 0;
+    for(DWORD i = 0; i < G30_SCRIPT_NUM_LVARS_TOTAL; i++)
+    {
+        m_context.vc.scriptLocalVar[i].dword = 0;
+    }
+    m_context.vc.bIsActive = TRUE;
+    m_context.vc.condResult = FALSE;
+    m_context.vc.bIsMissionThread = FALSE;
+    m_context.vc.bWaitMessage = FALSE;
+    m_context.vc.wakeTime = 0;
+    m_context.vc.condOp = 0;
+    m_context.vc.condNotFlag = FALSE;
+    m_context.vc.bWastedBustedCheck = TRUE;
+    m_context.vc.bWastedBustedFlag = FALSE;
+    m_context.vc.bIsLoadedMissionThread = FALSE;
 }
 
 

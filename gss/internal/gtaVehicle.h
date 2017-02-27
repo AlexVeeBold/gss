@@ -42,7 +42,7 @@ enum GVEH_PROOFS {
 
 typedef void* VehSpec;
 
-#include "idecl.h"
+#include <ulib/idecl.h>
 class IVehicle {
 public:
     IENTRY DWORD ICALL getVehSpecSize(void) IPURE;
@@ -51,13 +51,15 @@ public:
     IENTRY Vehicle ICALL spawn(VehSpec vehSpec) IPURE;
     IENTRY DWORD ICALL getModel(Vehicle vehicle) IPURE;
     IENTRY void ICALL doAlarmShort(Vehicle vehicle) IPURE;   // if possible for this vehicle type
+    IENTRY void ICALL stopEngine(Vehicle vehicle) IPURE;
     IENTRY void ICALL release(Vehicle* pVehicle) IPURE;
 };
 
 
 IVehicle* GtaVehicleInit(DWORD GtaVersion);
 
-DWORD GenerateFreeVehicleSpec(VehSpec vehSpec, const FloatAngledVector3& pos);
+//DWORD GenerateFreeVehicleSpec(VehSpec vehSpec, const FloatAngledVector3& pos);
+DWORD GenerateFreeVehicleSpec(VehSpec vehSpec, const FloatVector3& position, const SByteVector3& rotation);
 
 
 /*
